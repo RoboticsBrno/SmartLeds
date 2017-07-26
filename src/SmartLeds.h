@@ -39,6 +39,7 @@
         #include "driver/periph_ctrl.h"
         #include "freertos/semphr.h"
         #include "soc/rmt_struct.h"
+        #include <driver/spi_master.h>
     }
 #elif defined ( ESP_PLATFORM )
     extern "C" { // ...someone forgot to put in the includes...
@@ -49,6 +50,7 @@
         #include <soc/dport_reg.h>
         #include <soc/gpio_sig_map.h>
         #include <soc/rmt_struct.h>
+        #include <driver/spi_master.h>
     }
     #include <stdio.h>
 #endif
@@ -251,4 +253,126 @@ private:
     int _pixelPosition;
     int _componentPosition;
     int _halfIdx;
+};
+
+class Apa102 {
+public:
+    struct ApaRgb {
+        ApaRgb( uint8_t r = 0, uint8_t g = 0, uint32_t b = 0, uint32_t v = 0xFF)
+            : v( 0xE0 | v ), r( r ), g( g ), b( b )
+        {}
+
+        ApaRgb& operator=( const Rgb& o ) {
+            r = o.r;
+            g = o.g;
+            b = o.b;
+            return *this;
+        }
+
+        ApaRgb& operator=(const Hsv& o ) {
+            *this = Rgb{ o };
+            return *this;
+        }
+
+        uint8_t v, r, g, b;
+    };
+
+    static const int FINAL_FRAME_SIZE = 4;
+    static const int TRANS_COUNT = 2 + 8;
+
+    Apa102( int count, int clkpin, int datapin, BufferType doubleBuffer = SingleBuffer )
+        : _count( count ),
+          _firstBuffer( new ApaRgb[ count ] ),
+          _secondBuffer( doubleBuffer ? new ApaRgb[ count ] : nullptr ),
+          _initFrame( 0 )
+    {
+        spi_bus_config_t buscfg;
+        buscfg.mosi_io_num = datapin;
+        buscfg.miso_io_num = -1;
+        buscfg.sclk_io_num = clkpin;
+        buscfg.quadwp_io_num = -1;
+        buscfg.quadhd_io_num = -1;
+
+        spi_device_interface_config_t devcfg;
+        devcfg.clock_speed_hz = 1000000;
+        devcfg.mode=0;
+        devcfg.spics_io_num = -1;
+        devcfg.queue_size = TRANS_COUNT;
+        devcfg.pre_cb = nullptr;
+
+        auto ret=spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
+        assert(ret==ESP_OK);
+
+        ret=spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
+        assert(ret==ESP_OK);
+
+        std::fill_n( _finalFrame, FINAL_FRAME_SIZE, 0xFFFFFFFF );
+    }
+
+    ~Apa102() {
+        // ToDo
+    }
+
+    ApaRgb& operator[]( int idx ) {
+        return _firstBuffer[ idx ];
+    }
+
+    const ApaRgb& operator[]( int idx ) const {
+        return _firstBuffer[ idx ];
+    }
+
+    void show() {
+        _buffer = _firstBuffer.get();
+        startTransmission();
+        swapBuffers();
+    }
+
+    void wait() {
+        for ( int i = 0; i != _transCount; i++ ) {
+            spi_transaction_t *t;
+            spi_device_get_trans_result( _spi, &t, portMAX_DELAY );
+        }
+    }
+private:
+    void swapBuffers() {
+        if ( _secondBuffer )
+            _firstBuffer.swap( _secondBuffer );
+    }
+
+    void startTransmission() {
+        for ( int i = 0; i != TRANS_COUNT; i++ ) {
+            _transactions[ i ].command = 0;
+            _transactions[ i ].address = 0;
+            _transactions[ i ].flags = 0;
+            _transactions[ i ].rxlength = 0;
+            _transactions[ i ].rx_buffer = nullptr;
+        }
+        // Init frame
+        _transactions[ 0 ].length = 32;
+        _transactions[ 0 ].tx_buffer = &_initFrame;
+        spi_device_queue_trans( _spi, _transactions + 0, portMAX_DELAY );
+        // Data
+        _transactions[ 1 ].length = 32 * _count;
+        _transactions[ 1 ].tx_buffer = _buffer;
+        spi_device_queue_trans( _spi, _transactions + 1, portMAX_DELAY );
+        _transCount = 2;
+        // End frame
+        for ( int i = 0; i != 1 + _count / 32 / FINAL_FRAME_SIZE; i++ ) {
+            _transactions[ 2 + i ].length = 32 * FINAL_FRAME_SIZE;
+            _transactions[ 2 + i ].tx_buffer = _finalFrame;
+            spi_device_queue_trans( _spi, _transactions + 2 + i, portMAX_DELAY );
+            _transCount++;
+        }
+    }
+
+    spi_device_handle_t _spi;
+    int _count;
+    std::unique_ptr< ApaRgb[] > _firstBuffer, _secondBuffer;
+    ApaRgb *_buffer;
+
+    spi_transaction_t _transactions[ TRANS_COUNT ];
+    int _transCount;
+
+    uint32_t _initFrame;
+    uint32_t _finalFrame[ FINAL_FRAME_SIZE ];
 };
