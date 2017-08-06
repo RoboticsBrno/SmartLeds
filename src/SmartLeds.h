@@ -103,6 +103,7 @@ public:
           _finishedFlag( xSemaphoreCreateBinary() )
     {
         assert( channel >= 0 && channel < 8 );
+        assert( ledForChannel( channel ) == nullptr );
 
         DPORT_SET_PERI_REG_MASK( DPORT_PERIP_CLK_EN_REG, DPORT_RMT_CLK_EN );
         DPORT_CLEAR_PERI_REG_MASK( DPORT_PERIP_RST_EN_REG, DPORT_RMT_RST );
@@ -126,11 +127,16 @@ public:
         _bitToRmt[ 1 ].duration0 = _timing.T1H / ( detail::RMT_DURATION_NS * detail::DIVIDER );
         _bitToRmt[ 1 ].duration1 = _timing.T1L / ( detail::RMT_DURATION_NS * detail::DIVIDER );
 
-        esp_intr_alloc( ETS_RMT_INTR_SOURCE, 0, interruptHandler, this, &_interruptHandle );
+        if ( !anyAlive() )
+            esp_intr_alloc( ETS_RMT_INTR_SOURCE, 0, interruptHandler, nullptr, &_interruptHandle );
+
+        ledForChannel( channel ) = this;
     }
 
     ~SmartLed() {
-        esp_intr_free( _interruptHandle );
+        ledForChannel( _channel ) = nullptr;
+        if ( !anyAlive() )
+            esp_intr_free( _interruptHandle );
         vSemaphoreDelete( _finishedFlag );
     }
 
@@ -170,16 +176,17 @@ private:
         RMT.conf_ch[ channel ].conf1.idle_out_lv = 0;
     }
 
-    static void interruptHandler( void *arg ) {
-        auto self = reinterpret_cast< SmartLed * >( arg );
-        if ( RMT.int_st.val & ( 1 << ( 24 + self->_channel ) ) ) { // tx_thr_event
-            self->copyRmtHalfBlock();
-            RMT.int_clr.val |= 1 << ( 24 + self->_channel );
-        }
-        else if ( RMT.int_st.val & ( 1 << ( 3 * self->_channel ) ) ) { // tx_end
-            self->endTransmission();
-            RMT.int_clr.val |= 1 << ( 3 * self->_channel );
-            RMT.int_clr.ch0_tx_end = 1;
+    static void interruptHandler( void * ) {
+        for ( int channel = 0; channel != 8; channel++ ) {
+            auto self = ledForChannel( channel );
+            if ( RMT.int_st.val & ( 1 << ( 24 + channel ) ) ) { // tx_thr_event
+                if ( self ) self->copyRmtHalfBlock();
+                RMT.int_clr.val |= 1 << ( 24 + channel );
+            }
+            else if ( RMT.int_st.val & ( 1 << ( 3 * channel ) ) ) { // tx_end
+                if ( self ) self->endTransmission();
+                RMT.int_clr.val |= 1 << ( 3 * channel );
+            }
         }
     }
 
@@ -237,6 +244,18 @@ private:
 
     void endTransmission() {
         xSemaphoreGiveFromISR( _finishedFlag, nullptr );
+    }
+
+    static SmartLed*& ledForChannel( int channel ) {
+        static SmartLed* table[ 8 ] = { nullptr };
+        assert( channel < 8 );
+        return table[ channel ];
+    }
+
+    static bool anyAlive() {
+        for ( int i = 0; i != 8; i++ )
+            if ( ledForChannel( i ) != nullptr ) return true;
+        return false;
     }
 
     const LedType& _timing;
