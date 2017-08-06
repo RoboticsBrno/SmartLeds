@@ -25,6 +25,7 @@ Rgb::Rgb( Hsv y ) {
 Rgb& Rgb::operator=( Hsv hsv ) {
     Rgb r{ hsv };
     swap( r );
+    return *this;
 }
 
 Hsv::Hsv( Rgb r ) {
@@ -62,4 +63,5 @@ Hsv::Hsv( Rgb r ) {
 Hsv& Hsv::operator=( Rgb rgb ) {
     Hsv h{ rgb };
     swap( h );
+    return *this;
 }
