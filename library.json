@@ -1,6 +1,6 @@
 {
     "name": "SmartLeds",
-    "keywords": "LED, esp32, NeoPixel, WS2812, WS2812B",
+    "keywords": "LED, esp32, NeoPixel, WS2812, WS2812B, APA102",
     "description": "Simple & intuitive way to drive various smart LEDs on ESP32.",
     "repository":
     {
@@ -15,7 +15,7 @@
             "maintainer": true
         }
     ],
-    "version": "1.0.0",
+    "version": "1.1.0",
     "frameworks": "arduino",
     "platforms": "espressif32"
 }
