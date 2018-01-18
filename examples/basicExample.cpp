@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <SmartLeds.h>
 
 const int LED_COUNT = 5;
