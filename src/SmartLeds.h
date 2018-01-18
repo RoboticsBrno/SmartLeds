@@ -109,8 +109,8 @@ public:
         DPORT_CLEAR_PERI_REG_MASK( DPORT_PERIP_RST_EN_REG, DPORT_RMT_RST );
 
         PIN_FUNC_SELECT( GPIO_PIN_MUX_REG[ pin ], 2 );
-        gpio_matrix_out( static_cast< gpio_num_t >( pin ), RMT_SIG_OUT0_IDX + _channel, 0, 0 );
         gpio_set_direction( static_cast< gpio_num_t >( pin ), GPIO_MODE_OUTPUT );
+        gpio_matrix_out( static_cast< gpio_num_t >( pin ), RMT_SIG_OUT0_IDX + _channel, 0, 0 );
         initChannel( _channel );
 
         RMT.tx_lim_ch[ _channel ].limit = detail::MAX_PULSES;
