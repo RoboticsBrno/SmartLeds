@@ -360,8 +360,8 @@ private:
 
     void startTransmission() {
         for ( int i = 0; i != TRANS_COUNT; i++ ) {
-            _transactions[ i ].command = 0;
-            _transactions[ i ].address = 0;
+            _transactions[ i ].cmd = 0;
+            _transactions[ i ].addr = 0;
             _transactions[ i ].flags = 0;
             _transactions[ i ].rxlength = 0;
             _transactions[ i ].rx_buffer = nullptr;
