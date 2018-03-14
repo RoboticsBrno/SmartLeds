@@ -6,11 +6,11 @@ union Hsv;
 
 union Rgb {
     struct __attribute__ ((packed)) {
-        uint8_t r, g, b;
+        uint8_t r, g, b, _extra;
     };
     uint32_t value;
 
-    Rgb( uint8_t r = 0, uint8_t g = 0, uint8_t b = 0 ) : r( r ), g( g ), b( b ) {}
+    Rgb( uint8_t r = 0, uint8_t g = 0, uint8_t b = 0 ) : r( r ), g( g ), b( b ), _extra( 0 ) {}
     Rgb( Hsv c );
     Rgb& operator=( Rgb r ) { swap( r ); }
     Rgb& operator=( Hsv hsv );
@@ -43,11 +43,11 @@ private:
 
 union Hsv {
     struct __attribute__ ((packed)) {
-        uint8_t h, s, v;
+        uint8_t h, s, v, _extra;
     };
     uint32_t value;
 
-    Hsv( uint8_t h, uint8_t s = 0, uint8_t v = 0 ) : h( h ), s( s ), v( v ) {}
+    Hsv( uint8_t h, uint8_t s = 0, uint8_t v = 0 ) : h( h ), s( s ), v( v ), _extra( 0 ) {}
     Hsv( Rgb r );
     Hsv& operator=( Hsv h ) { swap( h ); }
     Hsv& operator=( Rgb rgb );
