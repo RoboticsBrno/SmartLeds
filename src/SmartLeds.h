@@ -293,7 +293,7 @@ public:
             return *this;
         }
 
-        uint8_t v, r, g, b;
+        uint8_t v, b, g, r;
     };
 
     static const int FINAL_FRAME_SIZE = 4;
@@ -306,13 +306,16 @@ public:
           _initFrame( 0 )
     {
         spi_bus_config_t buscfg;
+        memset( &buscfg, 0, sizeof( buscfg ) );
         buscfg.mosi_io_num = datapin;
         buscfg.miso_io_num = -1;
         buscfg.sclk_io_num = clkpin;
         buscfg.quadwp_io_num = -1;
         buscfg.quadhd_io_num = -1;
+        buscfg.max_transfer_sz = 65535;
 
         spi_device_interface_config_t devcfg;
+        memset( &devcfg, 0, sizeof( devcfg ) );
         devcfg.clock_speed_hz = 1000000;
         devcfg.mode=0;
         devcfg.spics_io_num = -1;
