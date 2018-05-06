@@ -6,11 +6,11 @@ const int DATA_PIN = 22;
 const int CHANNEL = 0;
 
 // SmartLed -> RMT driver (WS2812/WS2812B/SK6812/WS2813)
-//SmartLed leds( LED_WS2812, LED_COUNT, DATA_PIN, CHANNEL, DoubleBuffer );
+SmartLed leds( LED_WS2812, LED_COUNT, DATA_PIN, CHANNEL, DoubleBuffer );
 
 const int CLK_PIN = 23;
-// Apa102 -> SPI driver
-Apa102 leds(LED_COUNT, CLK_PIN, DATA_PIN);
+// APA102 -> SPI driver
+//Apa102 leds(LED_COUNT, CLK_PIN, DATA_PIN, DoubleBuffer);
 
 void setup() {
   Serial.begin(9600);  
@@ -38,7 +38,7 @@ void showRgb() {
 }
 
 void loop() {
-    Serial.println("New sequence");
+    Serial.println("New loop");
     
     if ( millis() % 10000 < 5000 )
         showGradient();
