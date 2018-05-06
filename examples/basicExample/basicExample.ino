@@ -1,13 +1,20 @@
 #include <Arduino.h>
 #include <SmartLeds.h>
 
-const int LED_COUNT = 5;
-const int DATA_PIN = 32;
+const int LED_COUNT = 15;
+const int DATA_PIN = 22;
 const int CHANNEL = 0;
 
-SmartLed leds( LED_WS2812, LED_COUNT, DATA_PIN, CHANNEL, DoubleBuffer );
+// SmartLed -> RMT driver (WS2812/WS2812B/SK6812/WS2813)
+//SmartLed leds( LED_WS2812, LED_COUNT, DATA_PIN, CHANNEL, DoubleBuffer );
 
-void setup() { }
+const int CLK_PIN = 23;
+// Apa102 -> SPI driver
+Apa102 leds(LED_COUNT, CLK_PIN, DATA_PIN);
+
+void setup() {
+  Serial.begin(9600);  
+}
 
 uint8_t hue;
 void showGradient() {
@@ -31,6 +38,8 @@ void showRgb() {
 }
 
 void loop() {
+    Serial.println("New sequence");
+    
     if ( millis() % 10000 < 5000 )
         showGradient();
     else
