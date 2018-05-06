@@ -25,3 +25,6 @@ performance.
 - can drive up to 2 strings
 - occupies the SPI peripherals
 - clock at 10 MHz
+
+## Available
+[PlatformIO - library 1740 - SmartLeds](https://platformio.org/lib/show/1740/SmartLeds)
