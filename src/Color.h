@@ -43,11 +43,12 @@ private:
 
 union Hsv {
     struct __attribute__ ((packed)) {
-        uint8_t h, s, v, _extra;
+        uint16_t h;
+        uint8_t s, v, _extra;
     };
     uint32_t value;
 
-    Hsv( uint8_t h, uint8_t s = 0, uint8_t v = 0 ) : h( h ), s( s ), v( v ), _extra( 0 ) {}
+    Hsv( uint16_t h, uint8_t s = 0, uint8_t v = 0 ) : h( h ), s( s ), v( v ), _extra( 0 ) {}
     Hsv( Rgb r );
     Hsv& operator=( Hsv h ) { swap( h ); return *this; }
     Hsv& operator=( Rgb rgb );

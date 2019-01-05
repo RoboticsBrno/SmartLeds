@@ -2,24 +2,56 @@
 #include <algorithm>
 #include <cmath>
 
+/* RGB <-> HSV conversion adapted from
+https://gist.github.com/fairlight1337/4935ae72bcbcc1ba5c72
+*/
+
 Rgb::Rgb( Hsv y ) {
-    // Formula taken from: https://en.wikipedia.org/wiki/HSL_and_HSV#From_HSV
-    int h = 6 * y.h;
-    int c = y.v * y.s;
-    int x = c * ( 255 - std::abs( h % ( 2 << 8 ) - 255 ) );
-    c >>= 8;
-    h >>= 8;
-    x >>= 16;
-    int m = y.v - c;
-    switch ( h ) {
-        case 6:
-        case 0: r = c + m; g = x + m; b = m;     break;
-        case 1: r = x + m; g = c + m; b = m;     break;
-        case 2: r = m;     g = c + m; b = x + m; break;
-        case 3: r = m;     g = x + m; b = c + m; break;
-        case 4: r = x + m; g = m;     b = c + m; break;
-        case 5: r = c + m; g = m;     b = x + m; break;
+    float saturation = y.s / 255.0;
+    int color = y.v * saturation;
+    float hPrime = fmod((float)y.h / 60.0, 6);
+    float x = color * (1 - fabs(fmod(hPrime, 2) - 1));
+    float m = y.v - color;
+    
+    if (0 <= hPrime && hPrime < 1) {
+        r = color;
+        g = static_cast<uint8_t>(x + 0.5);
+        b = 0;
     }
+    else if (1 <= hPrime && hPrime < 2) {
+        r = static_cast<uint8_t>(x + 0.5);
+        g = color;
+        b = 0;
+    }
+    else if(2 <= hPrime && hPrime < 3) {
+        r = 0;
+        g = color;
+        b = static_cast<uint8_t>(x + 0.5);
+    }
+    else if(3 <= hPrime && hPrime < 4) {
+        r = 0;
+        g = static_cast<uint8_t>(x + 0.5);
+        b = color;
+    }
+    else if(4 <= hPrime && hPrime < 5) {
+        r = static_cast<uint8_t>(x + 0.5);
+        g = 0;
+        b = color;
+    }
+    else if(5 <= hPrime && hPrime < 6) {
+        r = color;
+        g = 0;
+        b = static_cast<uint8_t>(x + 0.5);
+    }
+    else {
+        r = 0;
+        g = 0;
+        b = 0;
+    }
+    
+    r += m;
+    g += m;
+    b += m;
 }
 
 Rgb& Rgb::operator=( Hsv hsv ) {
@@ -29,35 +61,43 @@ Rgb& Rgb::operator=( Hsv hsv ) {
 }
 
 Hsv::Hsv( Rgb r ) {
-    // Formula taken from http://www.easyrgb.com/en/math.php
-    int min = std::min( r.r, std::min( r.g, r.b ) );
-    int max = std::max( r.r, std::max( r.g, r.b ) );
-    int delta = max - min;
-
-    v = max;
-    if ( delta == 0 ) {
-        h = s = 0;
-        return;
+    float colorMax = std::max(std::max(r.r, r.g), r.b);
+    float colorMin = std::min(std::min(r.r, r.g), r.b);
+    float delta = colorMax - colorMin;
+    float saturation = 0.0;
+    float hue = 0.0;
+    float value = 0.0;
+    
+    if(delta > 0) {
+        if(colorMax == r.r) {
+        hue = 60 * (fmod(((r.g - r.b) / delta), 6));
+        } else if(colorMax == r.g) {
+        hue = 60 * (((r.b - r.r) / delta) + 2);
+        } else if(colorMax == r.b) {
+        hue = 60 * (((r.r - r.g) / delta) + 4);
+        }
+        
+        if(colorMax > 0) {
+        saturation = delta / colorMax;
+        } else {
+        saturation = 0;
+        }
+        
+        value = colorMax;
+    } else {
+        hue = 0;
+        saturation = 0;
+        value = colorMax;
     }
+    
+    if(hue < 0) {
+        hue = 360 + hue;
+    }
+    saturation *= 100;
+    h = static_cast<uint16_t>(hue + 0.5);
+    s = static_cast<uint8_t>(saturation + 0.5);
+    v = static_cast<uint8_t>(value + 0.5);
 
-    s = ( delta << 8 ) / max;
-    int deltaR = ( ( ( ( max - r.r ) / 6 ) + ( max / 2 ) ) << 8 ) / max;
-    int deltaG = ( ( ( ( max - r.g ) / 6 ) + ( max / 2 ) ) << 8 ) / max;
-    int deltaB = ( ( ( ( max - r.b ) / 6 ) + ( max / 2 ) ) << 8 ) / max;
-
-    int hh;
-    if ( max == r.r )
-        hh = deltaB - deltaG;
-    else if ( max == r.g )
-        hh = 255 / 3 + deltaR - deltaB;
-    else
-        hh = 2 * 255 / 3 + deltaG - deltaR;
-
-    if ( hh < 0 )
-        hh += 255;
-    if ( h > 255 )
-        hh -= 255;
-    h = hh;
 }
 
 Hsv& Hsv::operator=( Rgb rgb ) {
