@@ -15,33 +15,33 @@ Rgb::Rgb( Hsv y ) {
     
     if (0 <= hPrime && hPrime < 1) {
         r = color;
-        g = static_cast<uint8_t>(x + 0.5);
+        g = static_cast<uint8_t>(x);
         b = 0;
     }
     else if (1 <= hPrime && hPrime < 2) {
-        r = static_cast<uint8_t>(x + 0.5);
+        r = static_cast<uint8_t>(x);
         g = color;
         b = 0;
     }
     else if(2 <= hPrime && hPrime < 3) {
         r = 0;
         g = color;
-        b = static_cast<uint8_t>(x + 0.5);
+        b = static_cast<uint8_t>(x);
     }
     else if(3 <= hPrime && hPrime < 4) {
         r = 0;
-        g = static_cast<uint8_t>(x + 0.5);
+        g = static_cast<uint8_t>(x);
         b = color;
     }
     else if(4 <= hPrime && hPrime < 5) {
-        r = static_cast<uint8_t>(x + 0.5);
+        r = static_cast<uint8_t>(x);
         g = 0;
         b = color;
     }
     else if(5 <= hPrime && hPrime < 6) {
         r = color;
         g = 0;
-        b = static_cast<uint8_t>(x + 0.5);
+        b = static_cast<uint8_t>(x);
     }
     else {
         r = 0;
@@ -94,9 +94,9 @@ Hsv::Hsv( Rgb r ) {
         hue = 360 + hue;
     }
     saturation *= 255;
-    h = static_cast<uint16_t>(hue + 0.5);
-    s = static_cast<uint8_t>(saturation + 0.5);
-    v = static_cast<uint8_t>(value + 0.5);
+    h = static_cast<uint16_t>(hue);
+    s = static_cast<uint8_t>(saturation);
+    v = static_cast<uint8_t>(value);
 }
 
 Hsv& Hsv::operator=( Rgb rgb ) {

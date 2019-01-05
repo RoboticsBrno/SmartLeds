@@ -16,12 +16,12 @@ void setup() {
   Serial.begin(9600);  
 }
 
-uint8_t hue;
+uint16_t hue;
 void showGradient() {
     hue++;
     // Use HSV to create nice gradient
     for ( int i = 0; i != LED_COUNT; i++ )
-        leds[ i ] = Hsv{ static_cast< uint16_t >( hue + 30 * i ), 255, 255 };
+        leds[ i ] = Hsv{ static_cast< uint16_t >( (hue + 30 * i) % 360 ), 255, 255 };
     leds.show();
     // Show is asynchronous; if we need to wait for the end of transmission,
     // we can use leds.wait(); however we use double buffered mode, so we
