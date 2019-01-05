@@ -21,7 +21,7 @@ void showGradient() {
     hue++;
     // Use HSV to create nice gradient
     for ( int i = 0; i != LED_COUNT; i++ )
-        leds[ i ] = Hsv{ static_cast< uint8_t >( hue + 30 * i ), 255, 255 };
+        leds[ i ] = Hsv{ static_cast< uint16_t >( hue + 30 * i ), 255, 255 };
     leds.show();
     // Show is asynchronous; if we need to wait for the end of transmission,
     // we can use leds.wait(); however we use double buffered mode, so we
