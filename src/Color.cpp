@@ -93,11 +93,10 @@ Hsv::Hsv( Rgb r ) {
     if(hue < 0) {
         hue = 360 + hue;
     }
-    saturation *= 100;
+    saturation *= 255;
     h = static_cast<uint16_t>(hue + 0.5);
     s = static_cast<uint8_t>(saturation + 0.5);
     v = static_cast<uint8_t>(value + 0.5);
-
 }
 
 Hsv& Hsv::operator=( Rgb rgb ) {
