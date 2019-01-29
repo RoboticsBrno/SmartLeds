@@ -18,7 +18,7 @@ union Rgb {
     void linearize() {
         r = ( static_cast< int >( r ) * static_cast< int >( r ) ) >> 8;
         g = ( static_cast< int >( g ) * static_cast< int >( g ) ) >> 8;
-        g = ( static_cast< int >( b ) * static_cast< int >( b ) ) >> 8;
+        b = ( static_cast< int >( b ) * static_cast< int >( b ) ) >> 8;
     }
     uint8_t getGrb( int idx ) {
         switch ( idx ) {
