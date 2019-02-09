@@ -2,24 +2,40 @@
 #include <algorithm>
 #include <cmath>
 
+namespace {
+
+// Int -> fixed point
+int up( int x ) { return x * 255; }
+int up2( int x ) { return x * 255 * 255; }
+int up3( int x ) { return x * 255 * 255 * 255; }
+// Fixed point -> int
+int down( int x ) { return x / 255; };
+int down2( int x ) { return x / 255 / 255; }
+int down3( int x ) { return x / 255 / 255 / 255; }
+
+} // namespace
+
 Rgb::Rgb( Hsv y ) {
-    // Formula taken from: https://en.wikipedia.org/wiki/HSL_and_HSV#From_HSV
-    int h = 6 * y.h;
-    int c = y.v * y.s;
-    int x = c * ( 255 - std::abs( h % ( 2 << 8 ) - 255 ) );
-    c >>= 8;
-    h >>= 8;
-    x >>= 16;
-    int m = y.v - c;
-    switch ( h ) {
-        case 6:
-        case 0: r = c + m; g = x + m; b = m;     break;
-        case 1: r = x + m; g = c + m; b = m;     break;
-        case 2: r = m;     g = c + m; b = x + m; break;
-        case 3: r = m;     g = x + m; b = c + m; break;
-        case 4: r = x + m; g = m;     b = c + m; break;
-        case 5: r = c + m; g = m;     b = x + m; break;
+    // // Formula taken from: https://gist.github.com/yoggy/8999625
+    int hi = y.h * 6;
+    int f  = y.h * 6 - up( down( hi ) );
+    int p  = y.v * ( up2( 1 ) - up( y.s ) );
+    int q  = y.v * ( up2( 1 ) - y.s * f );
+    int t  = y.v * ( up2( 1 ) - y.s * ( up( 1 ) - f ) );
+
+    int rr, gg, bb;
+    int vv = up2( y.v );
+    switch ( down( hi ) ) {
+        case 0: rr = vv, gg = t,  bb = p; break;
+        case 1: rr = q,  gg = vv, bb = p; break;
+        case 2: rr = p,  gg = vv, bb = t; break;
+        case 3: rr = p,  gg = q,  bb = vv; break;
+        case 4: rr = t,  gg = p,  bb = vv; break;
+        case 5: rr = vv, gg = p,  bb = q; break;
     }
+    r = down2( rr );
+    g = down2( gg );
+    b = down2( bb );
 }
 
 Rgb& Rgb::operator=( Hsv hsv ) {
@@ -29,34 +45,27 @@ Rgb& Rgb::operator=( Hsv hsv ) {
 }
 
 Hsv::Hsv( Rgb r ) {
-    // Formula taken from http://www.easyrgb.com/en/math.php
     int min = std::min( r.r, std::min( r.g, r.b ) );
     int max = std::max( r.r, std::max( r.g, r.b ) );
-    int delta = max - min;
+    int chroma = max - min;
 
     v = max;
-    if ( delta == 0 ) {
+    if ( chroma == 0 ) {
         h = s = 0;
         return;
     }
 
-    s = ( delta << 8 ) / max;
-    int deltaR = ( ( ( ( max - r.r ) / 6 ) + ( max / 2 ) ) << 8 ) / max;
-    int deltaG = ( ( ( ( max - r.g ) / 6 ) + ( max / 2 ) ) << 8 ) / max;
-    int deltaB = ( ( ( ( max - r.b ) / 6 ) + ( max / 2 ) ) << 8 ) / max;
-
+    s = up( chroma ) / max;
     int hh;
     if ( max == r.r )
-        hh = deltaB - deltaG;
+        hh = ( up( int( r.g ) - int( r.b ) ) ) / chroma / 6;
     else if ( max == r.g )
-        hh = 255 / 3 + deltaR - deltaB;
+        hh = 255 / 3 + ( up( int( r.b ) - int( r.r ) ) ) / chroma / 6;
     else
-        hh = 2 * 255 / 3 + deltaG - deltaR;
+        hh = 2 * 255 / 3 + ( up( int( r.r ) - int( r.g ) ) ) / chroma / 6;
 
     if ( hh < 0 )
         hh += 255;
-    if ( h > 255 )
-        hh -= 255;
     h = hh;
 }
 
