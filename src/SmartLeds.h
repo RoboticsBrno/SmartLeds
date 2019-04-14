@@ -156,6 +156,7 @@ public:
 
     void wait() {
         xSemaphoreTake( _finishedFlag, portMAX_DELAY );
+        xSemaphoreGive( _finishedFlag );
     }
 
 private:
