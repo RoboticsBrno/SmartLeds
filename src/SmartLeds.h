@@ -279,7 +279,7 @@ class Apa102 {
 public:
     struct ApaRgb {
         ApaRgb( uint8_t r = 0, uint8_t g = 0, uint32_t b = 0, uint32_t v = 0xFF)
-            : v( 0xE0 | v ), r( r ), g( g ), b( b )
+            : v( 0xE0 | v ), b( b ), g( g ), r( r )
         {}
 
         ApaRgb& operator=( const Rgb& o ) {
