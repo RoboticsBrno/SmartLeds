@@ -30,7 +30,7 @@
 
 #include <memory>
 #include <cassert>
-
+_PTR	 _EXFUN(memset,(_PTR, int, size_t));
 #if defined ( ARDUINO )
     extern "C" { // ...someone forgot to put in the includes...
         #include "esp32-hal.h"
