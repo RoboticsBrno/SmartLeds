@@ -30,6 +30,7 @@
 
 #include <memory>
 #include <cassert>
+#include <cstring>
 
 #if defined ( ARDUINO )
     extern "C" { // ...someone forgot to put in the includes...
