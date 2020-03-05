@@ -7,11 +7,9 @@ namespace {
 // Int -> fixed point
 int up( int x ) { return x * 255; }
 int up2( int x ) { return x * 255 * 255; }
-int up3( int x ) { return x * 255 * 255 * 255; }
 // Fixed point -> int
 int down( int x ) { return x / 255; };
 int down2( int x ) { return x / 255 / 255; }
-int down3( int x ) { return x / 255 / 255 / 255; }
 
 } // namespace
 
