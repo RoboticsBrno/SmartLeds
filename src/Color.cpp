@@ -32,6 +32,7 @@ Rgb::Rgb( Hsv y ) {
         case 3: rr = p,  gg = q,  bb = vv; break;
         case 4: rr = t,  gg = p,  bb = vv; break;
         case 5: rr = vv, gg = p,  bb = q; break;
+        default: __builtin_trap();
     }
     r = down2( rr );
     g = down2( gg );
