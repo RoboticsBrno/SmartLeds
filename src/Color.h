@@ -37,6 +37,10 @@ union Rgb {
         b = stretch( b, maxB );
     }
 
+    void stretchChannelsEvenly( uint8_t max ) {
+        stretchChannels( max, max, max );
+    }
+
 private:
     uint8_t stretch( int value, uint8_t max ) {
         return ( value * max ) >> 8;
