@@ -43,6 +43,22 @@ Rgb& Rgb::operator=( Hsv hsv ) {
     return *this;
 }
 
+Rgb Rgb::operator+( Rgb in ) const {
+    auto copy = *this;
+    copy += in;
+    return copy;
+}
+
+Rgb& Rgb::operator+=( Rgb in ) {
+    unsigned int red = r + in.r;
+    r = ( red < 255 ) ? red : 255;
+    unsigned int green = g + in.g;
+    g = ( green < 255 ) ? green : 255;
+    unsigned int blue = b + in.b;
+    b = ( blue < 255 ) ? blue : 255;
+    return *this;
+}
+
 Hsv::Hsv( Rgb r ) {
     int min = std::min( r.r, std::min( r.g, r.b ) );
     int max = std::max( r.r, std::max( r.g, r.b ) );

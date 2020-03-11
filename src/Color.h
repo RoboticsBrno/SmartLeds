@@ -14,6 +14,8 @@ union Rgb {
     Rgb( Hsv c );
     Rgb& operator=( Rgb r ) { swap( r ); return *this; }
     Rgb& operator=( Hsv hsv );
+    Rgb operator+( Rgb in ) const;
+    Rgb& operator+=( Rgb in );
     void swap( Rgb& o ) {  value = o.value; }
     void linearize() {
         r = ( static_cast< int >( r ) * static_cast< int >( r ) ) >> 8;
