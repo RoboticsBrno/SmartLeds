@@ -35,7 +35,7 @@
 #if defined ( ARDUINO )
     extern "C" { // ...someone forgot to put in the includes...
         #include "esp32-hal.h"
-        #include "esp_intr.h"
+        #include "esp_intr_alloc.h"
         #include "driver/gpio.h"
         #include "driver/periph_ctrl.h"
         #include "freertos/semphr.h"
@@ -44,7 +44,7 @@
     }
 #elif defined ( ESP_PLATFORM )
     extern "C" { // ...someone forgot to put in the includes...
-        #include <esp_intr.h>
+        #include <esp_intr_alloc.h>
         #include <driver/gpio.h>
         #include <freertos/FreeRTOS.h>
         #include <freertos/semphr.h>
