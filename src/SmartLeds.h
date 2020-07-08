@@ -87,7 +87,7 @@ static const double RMT_DURATION_NS = 12.5; // minimum time of a single RMT dura
 using LedType = detail::TimingParams;
 
 static const LedType LED_WS2812  = { 350, 700, 800, 600, 50000 };
-static const LedType LED_WS2812B = { 350, 900, 900, 350, 50000 };
+static const LedType LED_WS2812B = { 400, 850, 850, 400, 50100 };
 static const LedType LED_SK6812  = { 300, 600, 900, 600, 80000 };
 static const LedType LED_WS2813  = { 350, 800, 350, 350, 300000 };
 
