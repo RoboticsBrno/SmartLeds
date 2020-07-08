@@ -6,35 +6,33 @@ namespace {
 
 // Int -> fixed point
 int up( int x ) { return x * 255; }
-int up2( int x ) { return x * 255 * 255; }
-// Fixed point -> int
-int down( int x ) { return x / 255; };
-int down2( int x ) { return x / 255 / 255; }
 
 } // namespace
 
 Rgb::Rgb( Hsv y ) {
-    // // Formula taken from: https://gist.github.com/yoggy/8999625
-    int hi = y.h * 6;
-    int f  = y.h * 6 - up( down( hi ) );
-    int p  = y.v * ( up2( 1 ) - up( y.s ) );
-    int q  = y.v * ( up2( 1 ) - y.s * f );
-    int t  = y.v * ( up2( 1 ) - y.s * ( up( 1 ) - f ) );
+    // https://stackoverflow.com/questions/24152553/hsv-to-rgb-and-back-without-floating-point-math-in-python
+    // greyscale
+    if(y.s == 0) {
+        r = g = b = y.v;
+        return;
+    }
 
-    int rr, gg, bb;
-    int vv = up2( y.v );
-    switch ( down( hi ) ) {
-        case 0: rr = vv, gg = t,  bb = p; break;
-        case 1: rr = q,  gg = vv, bb = p; break;
-        case 2: rr = p,  gg = vv, bb = t; break;
-        case 3: rr = p,  gg = q,  bb = vv; break;
-        case 4: rr = t,  gg = p,  bb = vv; break;
-        case 5: rr = vv, gg = p,  bb = q; break;
+    const int region = y.h / 43;
+    const int remainder = (y.h - (region * 43)) * 6;
+
+    const int p = (y.v * (255 - y.s)) >> 8;
+    const int q = (y.v * (255 - ((y.s * remainder) >> 8))) >> 8;
+    const int t = (y.v * (255 - ((y.s * (255 -remainder)) >> 8))) >> 8;
+
+    switch(region) {
+        case 0: r = y.v; g = t; b = p; break;
+        case 1: r = q; g = y.v; b = p; break;
+        case 2: r = p; g = y.v; b = t; break;
+        case 3: r = p; g = q; b = y.v; break;
+        case 4: r = t; g = p; b = y.v; break;
+        case 5: r = y.v; g = p; b = q; break;
         default: __builtin_trap();
     }
-    r = down2( rr );
-    g = down2( gg );
-    b = down2( bb );
 }
 
 Rgb& Rgb::operator=( Hsv hsv ) {
