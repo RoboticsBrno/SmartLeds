@@ -12,7 +12,7 @@ union Rgb {
 
     Rgb( uint8_t r = 0, uint8_t g = 0, uint8_t b = 0 ) : r( r ), g( g ), b( b ), _extra( 0 ) {}
     Rgb( Hsv c );
-    Rgb& operator=( Rgb r ) { swap( r ); return *this; }
+    Rgb& operator=( Rgb rgb ) { swap( rgb ); return *this; }
     Rgb& operator=( Hsv hsv );
     Rgb operator+( Rgb in ) const;
     Rgb& operator+=( Rgb in );

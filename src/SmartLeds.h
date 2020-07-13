@@ -160,6 +160,18 @@ public:
         xSemaphoreGive( _finishedFlag );
     }
 
+    int size() const {
+        return _count;
+    }
+
+    Rgb *begin() { return _firstBuffer.get(); }
+    const Rgb *begin() const { return _firstBuffer.get(); }
+    const Rgb *cbegin() const { return _firstBuffer.get(); }
+
+    Rgb *end() { return _firstBuffer.get() + _count; }
+    const Rgb *end() const { return _firstBuffer.get() + _count; }
+    const Rgb *cend() const { return _firstBuffer.get() + _count; }
+
 private:
     static void initChannel( int channel ) {
         RMT.apb_conf.fifo_mask = 1;  //enable memory access, instead of FIFO mode.
