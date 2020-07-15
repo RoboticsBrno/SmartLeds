@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-
+#include "esp_attr.h"
 union Hsv;
 
 union Rgb {
@@ -22,14 +22,8 @@ union Rgb {
         g = ( static_cast< int >( g ) * static_cast< int >( g ) ) >> 8;
         b = ( static_cast< int >( b ) * static_cast< int >( b ) ) >> 8;
     }
-    uint8_t getGrb( int idx ) {
-        switch ( idx ) {
-            case 0: return g;
-            case 1: return r;
-            case 2: return b;
-        }
-        __builtin_unreachable();
-    }
+
+    uint8_t IRAM_ATTR getGrb( int idx );
 
     void stretchChannels( uint8_t maxR, uint8_t maxG, uint8_t maxB ) {
         r = stretch( r, maxR );
