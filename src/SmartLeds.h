@@ -106,6 +106,8 @@ public:
         assert( channel >= 0 && channel < 8 );
         assert( ledForChannel( channel ) == nullptr );
 
+        xSemaphoreGive(_finishedFlag);
+
         DPORT_SET_PERI_REG_MASK( DPORT_PERIP_CLK_EN_REG, DPORT_RMT_CLK_EN );
         DPORT_CLEAR_PERI_REG_MASK( DPORT_PERIP_RST_EN_REG, DPORT_RMT_RST );
 
@@ -155,9 +157,12 @@ public:
         swapBuffers();
     }
 
-    void wait() {
-        xSemaphoreTake( _finishedFlag, portMAX_DELAY );
-        xSemaphoreGive( _finishedFlag );
+    bool wait(TickType_t timeout = portMAX_DELAY) {
+        if(xSemaphoreTake( _finishedFlag, timeout ) == pdTRUE) {
+            xSemaphoreGive( _finishedFlag );
+            return true;
+        }
+        return false;
     }
 
     int size() const {
@@ -247,11 +252,15 @@ private:
     }
 
     void startTransmission() {
+        // Invalid use of the library
+        if(xSemaphoreTake( _finishedFlag, 0 ) != pdTRUE)
+            abort();
+
         _pixelPosition = _componentPosition = _halfIdx = 0;
         copyRmtHalfBlock();
         if ( _pixelPosition < _count )
             copyRmtHalfBlock();
-        xSemaphoreTake( _finishedFlag, 0 );
+
         RMT.conf_ch[ _channel ].conf1.mem_rd_rst = 1;
         RMT.conf_ch[ _channel ].conf1.tx_start = 1;
     }
