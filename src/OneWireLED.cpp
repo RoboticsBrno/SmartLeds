@@ -1,11 +1,18 @@
 #include "OneWireLED.h"
-OneWireLED::OneWireLED(LedType type, uint8_t pin, uint8_t channel, uint16_t count) : 
-  AddressableLED(count, WireType::OneWire, type.pixelOrder, type.bytesPerPixel),
-  _ledParameters(type),
+
+OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t count, PixelOrder pixelOrder) : 
+  AddressableLED(count, WireType::OneWire, pixelOrder, type.bytesPerPixel),
+  _type(type),
   _pin(pin),
   _channel((rmt_channel_t) channel) {
   assert(channel < 8);
   assert(ledForChannel(_channel) == nullptr);
+
+  // ensure we have timing data for LED type
+  auto timing = ledTiming.find(type);
+  assert(timing != ledTiming.end());
+
+  _ledParameters = timing->second;
 
     // configure RMT for GPIO
   rmt_config_t config = RMT_DEFAULT_CONFIG_TX((gpio_num_t) pin, _channel);
@@ -22,7 +29,7 @@ OneWireLED::OneWireLED(LedType type, uint8_t pin, uint8_t channel, uint16_t coun
     return;
   }
 
-  // set T0H, T0L, T1H, T1L durations
+  // set T0H, T0L, T1H, T1L durations into RMT pulses
   float ratio = (float)clock / 1e9;
   uint32_t t0HTicks = (uint32_t) (_ledParameters.T0H * ratio);
   uint32_t t0LTicks = (uint32_t) (_ledParameters.T0L * ratio);
@@ -120,11 +127,6 @@ void OneWireLED::pixelToRaw(Rgb *pixel, uint16_t index) {
       _buffer[start + 1] = pixel->g;
       _buffer[start + 2] = pixel->b;
       break;
-    case PixelOrder::GRB:
-      _buffer[start] = pixel->g;
-      _buffer[start + 1] = pixel->r;
-      _buffer[start + 2] = pixel->b;
-      break;
     case PixelOrder::RGBW:
       _buffer[start] = pixel->r - white;
       _buffer[start + 1] = pixel->g - white;
@@ -136,6 +138,11 @@ void OneWireLED::pixelToRaw(Rgb *pixel, uint16_t index) {
       _buffer[start + 1] = pixel->r - white;
       _buffer[start + 2] = pixel->b - white;
       _buffer[start + 3] = white;
-    default: break;
+    case PixelOrder::GRB:
+    default:
+      _buffer[start] = pixel->g;
+      _buffer[start + 1] = pixel->r;
+      _buffer[start + 2] = pixel->b;
+      break;
   }
 }

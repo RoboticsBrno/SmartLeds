@@ -27,6 +27,9 @@ TwoWireLED::TwoWireLED(spi_host_device_t host, uint16_t count, uint8_t clock, ui
   assert(ret == ESP_OK);
 
   std::fill_n(_finalFrame, FINAL_FRAME_SIZE, 0xFFFFFFFF);
+
+  // default as full brightness
+  setBrightness();
 }
 
 TwoWireLED::~TwoWireLED() {
@@ -78,10 +81,9 @@ void TwoWireLED::startTransmission() {
 
 void TwoWireLED::pixelToRaw(Rgb *pixel, uint16_t index) {
   uint16_t start = index * FINAL_FRAME_SIZE;
-  uint8_t white = std::min(pixel->r, std::min(pixel->g, pixel->b));
 
   // TODO: set buffer based on pixel order
-  _buffer[start] = 0xE0 | white;
+  _buffer[start] = 0xE0 | _brightness;
   _buffer[start + 3] = pixel->b;
   _buffer[start + 2] = pixel->g;
   _buffer[start + 1] = pixel->r;

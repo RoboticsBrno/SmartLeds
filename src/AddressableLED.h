@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstring>
 #include <stdio.h>
+#include <map>
 
 #include <freertos/FreeRTOS.h>
 
@@ -11,6 +12,17 @@
 
 enum WireType { OneWire, TwoWire };
 enum PixelOrder { RGB, GRB, RGBW, GRBW, WBGR };
+
+enum LEDType : uint8_t {
+  NeoPixel,
+  WS2812,
+  WS2812B,
+  WS2813,
+  SK6812,
+  SK2812_RGBW,
+  DotStar,
+  APA102,
+};
 
 class AddressableLED {
   protected:
@@ -24,6 +36,8 @@ class AddressableLED {
 
     virtual void startTransmission() = 0;
     static std::string TAG;
+
+    static std::map<LEDType, TimingParameters> ledTiming;
 
   public:
     AddressableLED(int count, WireType wireType, PixelOrder pixelOrder, uint8_t bytesPerPixel);
