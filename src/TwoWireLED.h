@@ -21,9 +21,6 @@ class TwoWireLED : public AddressableLED {
     TwoWireLED(spi_host_device_t host, uint16_t count, uint8_t clock, uint8_t data, PixelOrder pixelOrder = PixelOrder::WBGR);
     ~TwoWireLED();
 
-    Rgb& operator[](int idx) { return _firstBuffer[idx]; }
-    const Rgb& operator[](int idx) const { return _firstBuffer[idx]; }
-
     void show();
     bool wait(uint32_t timeout = portMAX_DELAY);
     int size() const;
