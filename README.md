@@ -2,6 +2,11 @@
 
 A fork of [SmartLeds](https://github.com/RoboticsBrno/SmartLeds) that gives lets you drive RGB and RGBW addressable LEDs via RMT and SPI.
 
+## Differences from SmartLeds
+* Supports both RGB and RGBW type of leds
+* Utilizes the built-in ESP32 RMT driver to translate pixel data into RMT signals.
+* Renames `SmartLed` to `OneWireLED` and `Apa102` to `TwoWireLED`. Both inherit from an abstract class called `AddressableLED`
+
 ## Supported LEDs:
 
 - WS2812  (RMT driver)
