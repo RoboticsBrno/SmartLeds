@@ -6,8 +6,6 @@
 const int LED_COUNT = 15;
 const int DATA_PIN = 22;
 const int CHANNEL = 0;
-const int CLK_PIN = 23;
-
 
 AddressableLED *leds;
 
@@ -15,6 +13,7 @@ AddressableLED *leds;
 leds = new OneWireLED(WS2812B, CHANNEL, DATA_PIN, LED_COUNT);
 
 // APA102 -> SPI driver
+// const int CLK_PIN = 23;
 // leds = new TwoWireLED(HSPI_HOST, LED_COUNT, CLK_PIN, DATA_PIN)
 
 void setup() {
