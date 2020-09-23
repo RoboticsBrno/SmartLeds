@@ -10,15 +10,6 @@
 #include <driver/rmt.h>
 #include "esp_log.h"
 
-struct TimingParameters {
-  uint32_t T0H;
-  uint32_t T1H;
-  uint32_t T0L;
-  uint32_t T1L;
-  uint32_t TRS;
-  uint8_t bytesPerPixel;  
-};
-
 struct Timing {
   rmt_item32_t bit0;
   rmt_item32_t bit1;

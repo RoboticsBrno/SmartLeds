@@ -24,6 +24,15 @@ enum LEDType : uint8_t {
   APA102,
 };
 
+struct LEDTimingParameters {
+  uint32_t T0H;
+  uint32_t T1H;
+  uint32_t T0L;
+  uint32_t T1L;
+  uint32_t TRS;
+  uint8_t bytesPerPixel;  
+};
+
 class AddressableLED {
   protected:
     uint16_t _count;
@@ -37,7 +46,7 @@ class AddressableLED {
     virtual void startTransmission() = 0;
     static std::string TAG;
 
-    static std::map<LEDType, TimingParameters> ledTiming;
+    static std::map<LEDType, LEDTimingParameters> ledTiming;
 
   public:
     AddressableLED(int count, WireType wireType, PixelOrder pixelOrder, uint8_t bytesPerPixel);

@@ -2,7 +2,7 @@
 
 std::string AddressableLED::TAG = "AddressableLED";
 
-std::map<LEDType, TimingParameters> AddressableLED::ledTiming = {
+std::map<LEDType, LEDTimingParameters> AddressableLED::ledTiming = {
   std::make_pair(NeoPixel, { 350, 700, 800, 600, 50000, 3 });
   std::make_pair(WS2812, { 350, 700, 800, 600, 50000, 3 });
   std::make_pair(WS2812B, { 400, 850, 850, 400, 50100, 3 });
