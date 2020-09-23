@@ -21,7 +21,7 @@ class OneWireLED : public AddressableLED {
   LEDType _type;
   uint8_t _pin;
   rmt_channel_t _channel;
-  TimingParameters _ledParameters;
+  LEDTimingParameters _ledParameters;
 
   Timing _timing;
   intr_handle_t _interruptHandle;
