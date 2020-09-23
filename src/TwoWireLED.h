@@ -18,7 +18,7 @@ class TwoWireLED : public AddressableLED {
   uint32_t _finalFrame[FINAL_FRAME_SIZE];
 
   public:
-    TwoWireLED(spi_host_device_t host, uint16_t count, uint8_t clock, uint8_t data, BufferType buffer = SingleBuffer);
+    TwoWireLED(spi_host_device_t host, uint16_t count, uint8_t clock, uint8_t data, PixelOrder pixelOrder = PixelOrder::WBGR);
     ~TwoWireLED();
 
     Rgb& operator[](int idx) { return _firstBuffer[idx]; }

@@ -10,7 +10,7 @@
 #include "Color.h"
 
 enum WireType { OneWire, TwoWire };
-enum PixelOrder { RGB, GRB, RGBW, GRBW };
+enum PixelOrder { RGB, GRB, RGBW, GRBW, WBGR };
 
 class AddressableLED {
   protected:

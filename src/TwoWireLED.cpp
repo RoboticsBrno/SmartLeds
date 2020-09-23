@@ -1,7 +1,7 @@
 #include "TwoWireLED.h"
 
-TwoWireLED::TwoWireLED(spi_host_device_t host, uint16_t count, uint8_t clock, uint8_t data, BufferType bufferType) 
-  : AddressableLED(count, WireType::TwoWire, bufferType, 4) {
+TwoWireLED::TwoWireLED(spi_host_device_t host, uint16_t count, uint8_t clock, uint8_t data, PixelOrder pixelOrder) 
+  : AddressableLED(count, WireType::TwoWire, pixelOrder, 4) {
 
   spi_bus_config_t buscfg;
   memset(&buscfg, 0, sizeof(buscfg));
