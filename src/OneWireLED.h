@@ -14,7 +14,6 @@ struct Timing {
   rmt_item32_t bit0;
   rmt_item32_t bit1;
   uint32_t reset;
-  uint8_t bytesPerPixel;
 };
 
 class OneWireLED : public AddressableLED {
@@ -48,7 +47,7 @@ class OneWireLED : public AddressableLED {
     size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num, void* context);
 
   public:
-    OneWireLED(LedType type, uint8_t pin, uint8_t channel, uint16_t count, PixelOrder pixelOrder = PixelOrder::GRB);
+    OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t count, PixelOrder pixelOrder = PixelOrder::GRB);
     ~OneWireLED();
 
     bool wait(uint32_t timeout = portMAX_DELAY);

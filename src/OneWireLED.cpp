@@ -1,7 +1,7 @@
 #include "OneWireLED.h"
 
 OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t count, PixelOrder pixelOrder) : 
-  AddressableLED(count, WireType::OneWire, pixelOrder, type.bytesPerPixel),
+  AddressableLED(count, WireType::OneWire, pixelOrder, pixelsForPixelOrder(pixelOrder)),
   _type(type),
   _pin(pin),
   _channel((rmt_channel_t) channel) {
@@ -38,7 +38,6 @@ OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t coun
   _timing.bit0 = {{{ t0HTicks, 1, t0LTicks, 0 }}};
   _timing.bit1 = {{{ t1HTicks, 1, t1LTicks, 0 }}};
   _timing.reset = _ledParameters.TRS;
-  _timing.bytesPerPixel = _ledParameters.bytesPerPixel;
 
   // install translator
   err = rmt_translator_init(_channel, translateToRMT, &_timing);
@@ -126,6 +125,11 @@ void OneWireLED::pixelToRaw(Rgb *pixel, uint16_t index) {
       _buffer[start] = pixel->r;
       _buffer[start + 1] = pixel->g;
       _buffer[start + 2] = pixel->b;
+      break;
+    case PixelOrder::BGR:
+      _buffer[start] = pixel->b;
+      _buffer[start + 1] = pixel->g;
+      _buffer[start + 2] = pixel->r;
       break;
     case PixelOrder::RGBW:
       _buffer[start] = pixel->r - white;

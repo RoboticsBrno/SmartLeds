@@ -11,7 +11,7 @@
 #include "Color.h"
 
 enum WireType { OneWire, TwoWire };
-enum PixelOrder { RGB, GRB, RGBW, GRBW, WBGR };
+enum PixelOrder { RGB, GRB, BGR, RGBW, GRBW, WBGR };
 
 enum LEDType : uint8_t {
   NeoPixel,
@@ -19,7 +19,7 @@ enum LEDType : uint8_t {
   WS2812B,
   WS2813,
   SK6812,
-  SK2812_RGBW,
+  SK6812_RGBW,
   DotStar,
   APA102,
 };
@@ -30,7 +30,6 @@ struct LEDTimingParameters {
   uint32_t T0L;
   uint32_t T1L;
   uint32_t TRS;
-  uint8_t bytesPerPixel;  
 };
 
 class AddressableLED {
@@ -47,6 +46,21 @@ class AddressableLED {
     static std::string TAG;
 
     static std::map<LEDType, LEDTimingParameters> ledTiming;
+
+    static uint8_t pixelsForPixelOrder(PixelOrder order) {
+      switch (order) {
+        case RGB:
+        case GRB:
+        case BGR:
+          return 3;
+        case RGBW:
+        case GRBW:
+        case WBGR:
+          return 4;
+        default:
+          return 3;
+      }
+    }
 
   public:
     AddressableLED(int count, WireType wireType, PixelOrder pixelOrder, uint8_t bytesPerPixel);
