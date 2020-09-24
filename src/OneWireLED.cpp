@@ -11,10 +11,9 @@ OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t coun
   // ensure we have timing data for LED type
   auto timing = ledTiming.find(type);
   assert(timing != ledTiming.end());
-
   _ledParameters = timing->second;
 
-    // configure RMT for GPIO
+  // configure RMT for GPIO
   rmt_config_t config = RMT_DEFAULT_CONFIG_TX((gpio_num_t) pin, _channel);
   config.clk_div = 2;
 
