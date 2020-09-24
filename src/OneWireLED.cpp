@@ -20,7 +20,7 @@ OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t coun
 
   // install RMT driver for channel
   rmt_config(&config);
-  rmt_driver_install(_channel, 0, ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL1);
+  rmt_driver_install(_channel, 0, 0);
 
   uint32_t clock = 0;
   auto err = rmt_get_counter_clock(_channel, &clock);
@@ -100,16 +100,16 @@ void IRAM_ATTR OneWireLED::translateToRMT(const void *src, rmt_item32_t *dest,
     uint8_t data = *psrc;
     for (uint8_t bit = 0; bit < 8; bit++)
     {
-        pdest->val = (data & 0x80) ? led->bit1.val : led->bit0.val;
-        pdest++;
-        data <<= 1;
+      pdest->val = (data & 0x80) ? led->bit1.val : led->bit0.val;
+      pdest++;
+      data <<= 1;
     }
     num += 8;
     size++;
 
-    if (size >= src_size || num >= wanted_num) {
-        break;
-    }
+    if (size >= src_size || num >= wanted_num)
+      break;
+
     psrc++;
   }
   *translated_size = size;
@@ -142,6 +142,7 @@ void OneWireLED::pixelToRaw(Rgb *pixel, uint16_t index) {
       _buffer[start + 1] = pixel->r - white;
       _buffer[start + 2] = pixel->b - white;
       _buffer[start + 3] = white;
+      break;
     case PixelOrder::GRB:
     default:
       _buffer[start] = pixel->g;

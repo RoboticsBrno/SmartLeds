@@ -16,7 +16,6 @@ enum PixelOrder { RGB, GRB, BGR, RGBW, GRBW, WBGR };
 enum LEDType : uint8_t {
   NeoPixel,
   WS2812,
-  WS2812B,
   WS2813,
   SK6812,
   SK6812_RGBW,
