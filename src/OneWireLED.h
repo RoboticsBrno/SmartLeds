@@ -21,8 +21,6 @@ class OneWireLED : public AddressableLED {
   uint8_t _pin;
   rmt_channel_t _channel;
   LEDTimingParameters _ledParameters;
-
-  Timing _timing;
   intr_handle_t _interruptHandle;
 
   uint16_t _pixelPosition;
@@ -37,8 +35,20 @@ class OneWireLED : public AddressableLED {
   void startTransmission();
   void pixelToRaw(Rgb *pixel, uint16_t index);
 
+  static uint32_t _clock;
+
+  // translators
+  static void IRAM_ATTR translateWS2812(const void *src, rmt_item32_t *dest, size_t src_size, 
+    size_t wanted_num, size_t *translated_size, size_t *item_num);
+
+  static void IRAM_ATTR translateWS2813(const void *src, rmt_item32_t *dest, size_t src_size, 
+    size_t wanted_num, size_t *translated_size, size_t *item_num);
+
+  static void IRAM_ATTR translateSK6812(const void *src, rmt_item32_t *dest, size_t src_size, 
+    size_t wanted_num, size_t *translated_size, size_t *item_num);
+
   static void IRAM_ATTR translateToRMT(const void *src, rmt_item32_t *dest, 
-    size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num, void* context);
+    size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num, LEDTimingParameters* timingParameters);
 
   public:
     OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t count, PixelOrder pixelOrder = PixelOrder::GRB);

@@ -1,5 +1,7 @@
 #include "OneWireLED.h"
 
+uint32_t OneWireLED::_clock = 0;
+
 OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t count, PixelOrder pixelOrder) : 
   AddressableLED(count, WireType::OneWire, pixelOrder, pixelsForPixelOrder(pixelOrder)),
   _type(type),
@@ -21,25 +23,25 @@ OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t coun
   rmt_config(&config);
   rmt_driver_install(_channel, 0, 0);
 
-  uint32_t clock = 0;
-  auto err = rmt_get_counter_clock(_channel, &clock);
+  auto err = rmt_get_counter_clock(_channel, &_clock);
   if (err != ESP_OK) {
     printf("Unable to get RMT counter clock frequency\n");
     return;
   }
 
-  // set T0H, T0L, T1H, T1L durations into RMT pulses
-  float ratio = (float)clock / 1e9;
-  uint32_t t0HTicks = (uint32_t) (_ledParameters.T0H * ratio);
-  uint32_t t0LTicks = (uint32_t) (_ledParameters.T0L * ratio);
-  uint32_t t1HTicks = (uint32_t) (_ledParameters.T1H * ratio);
-  uint32_t t1LTicks = (uint32_t) (_ledParameters.T1L * ratio);
-  _timing.bit0 = {{{ t0HTicks, 1, t0LTicks, 0 }}};
-  _timing.bit1 = {{{ t1HTicks, 1, t1LTicks, 0 }}};
-  _timing.reset = _ledParameters.TRS;
-
   // install translator
-  err = rmt_translator_init(_channel, translateToRMT, &_timing);
+  switch (type) {
+    case WS2813:
+      err = rmt_translator_init(_channel, translateWS2813);
+      break;
+    case SK6812:
+    case SK6812_RGBW:
+      err = rmt_translator_init(_channel, translateSK6812);
+    case NeoPixel:
+    case WS2812:
+    default:
+      err = rmt_translator_init(_channel, translateWS2812);
+  }
   if (err != ESP_OK) {
     printf("Unable to register RMT translator for channel %d\n", channel);
     return;
@@ -80,8 +82,26 @@ bool OneWireLED::anyAlive() {
   return false;
 }
 
+void IRAM_ATTR OneWireLED::translateWS2812(const void *src, rmt_item32_t *dest, 
+  size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num) {
+    LEDTimingParameters params = ledTiming[WS2812];
+    translateToRMT(src, dest, src_size, wanted_num, translated_size, item_num, &params);
+}
+
+void IRAM_ATTR OneWireLED::translateWS2813(const void *src, rmt_item32_t *dest, 
+  size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num) {
+    LEDTimingParameters params = ledTiming[WS2813];
+    translateToRMT(src, dest, src_size, wanted_num, translated_size, item_num, &params);
+}
+
+void IRAM_ATTR OneWireLED::translateSK6812(const void *src, rmt_item32_t *dest, 
+  size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num) {
+    LEDTimingParameters params = ledTiming[SK6812];
+    translateToRMT(src, dest, src_size, wanted_num, translated_size, item_num, &params);
+}
+
 void IRAM_ATTR OneWireLED::translateToRMT(const void *src, rmt_item32_t *dest, 
-  size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num, void* context) {
+  size_t src_size, size_t wanted_num, size_t *translated_size, size_t *item_num, LEDTimingParameters* timingParameters) {
 
   if (src == NULL || dest == NULL) {
       *translated_size = 0;
@@ -94,12 +114,22 @@ void IRAM_ATTR OneWireLED::translateToRMT(const void *src, rmt_item32_t *dest,
   const uint8_t* psrc = static_cast<const uint8_t*>(src);
   rmt_item32_t* pdest = dest;
 
-  Timing *led = (Timing*)context;
+  Timing timing;
+  // set T0H, T0L, T1H, T1L durations into RMT pulses
+  float ratio = (float)_clock / 1e9;
+  uint32_t t0HTicks = (uint32_t) (timingParameters->T0H * ratio);
+  uint32_t t0LTicks = (uint32_t) (timingParameters->T0L * ratio);
+  uint32_t t1HTicks = (uint32_t) (timingParameters->T1H * ratio);
+  uint32_t t1LTicks = (uint32_t) (timingParameters->T1L * ratio);
+  timing.bit0 = {{{ t0HTicks, 1, t0LTicks, 0 }}};
+  timing.bit1 = {{{ t1HTicks, 1, t1LTicks, 0 }}};
+  timing.reset = timingParameters->TRS;
+
   for (;;) {
     uint8_t data = *psrc;
     for (uint8_t bit = 0; bit < 8; bit++)
     {
-      pdest->val = (data & 0x80) ? led->bit1.val : led->bit0.val;
+      pdest->val = (data & 0x80) ? timing.bit1.val : timing.bit0.val;
       pdest++;
       data <<= 1;
     }
