@@ -1,7 +1,5 @@
 #include "AddressableLED.h"
 
-std::string AddressableLED::TAG = "AddressableLED";
-
 LEDTimingParameters ws2811Timing = { 300, 950, 900, 350, 300000 };
 LEDTimingParameters ws2812Timing = { 400, 850, 800, 450, 300000 };
 LEDTimingParameters ws2813Timing = { 350, 800, 350, 350, 300000 };
