@@ -1,7 +1,5 @@
 #include "OneWireLED.h"
 
-uint32_t OneWireLED::_clock = 0;
-
 OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t count, PixelOrder pixelOrder) : 
   AddressableLED(count, WireType::OneWire, pixelOrder, pixelsForPixelOrder(pixelOrder)),
   _type(type),

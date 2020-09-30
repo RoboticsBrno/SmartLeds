@@ -20,7 +20,7 @@ enum LEDType : uint8_t {
   SK6812,
   SK6812_RGBW,
   DotStar,
-  APA102,
+  APA102 = 4,
 };
 
 struct LEDTimingParameters {
@@ -35,6 +35,7 @@ static const char* ADDRESSABLE_LED_TAG = "AddressableLED";
 
 class AddressableLED {
   protected:
+    portMUX_TYPE _transmitMutex;
     uint16_t _count;
     WireType _wireType;
     PixelOrder _pixelOrder;
