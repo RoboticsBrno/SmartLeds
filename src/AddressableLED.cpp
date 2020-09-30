@@ -23,10 +23,10 @@ AddressableLED::AddressableLED(int count, WireType wireType, PixelOrder pixelOrd
   _wireType(wireType),
   _pixelOrder(pixelOrder),
   _bytesPerPixel(bytesPerPixel),
-  _pixels(new Rgb[count + 1]),
-  _buffer(static_cast<uint8_t*>(malloc((_count + 1) * bytesPerPixel)))
+  _pixels(new Rgb[count]),
+  _buffer(static_cast<uint8_t*>(malloc(_count * bytesPerPixel)))
   { 
-    memset(_buffer, 0x00, (_count + 1) * _bytesPerPixel);
+    memset(_buffer, 0x00, _count * _bytesPerPixel);
     vPortCPUInitializeMutex(&_transmitMutex);
   }
 
