@@ -5,8 +5,8 @@ A fork of [SmartLeds](https://github.com/RoboticsBrno/SmartLeds) that gives lets
 ## Differences from SmartLeds
 
 * Supports both RGB and RGBW type of leds
-* Gives you the option to specify pixel order (useful for chipsets that operate differently from the standard GRB order)
-* Utilizes the built-in ESP32 RMT driver to translate pixel data into RMT signals.
+* Gives you the option to specify pixel order (useful for chipsets that operate differently from the common GRB order)
+* Utilizes the built-in ESP32 RMT driver to translate pixel data into RMT signals
 * Renames `SmartLed` to `OneWireLED` and `Apa102` to `TwoWireLED`. Both inherit from an abstract class called `AddressableLED`
 
 ## Supported LEDs:

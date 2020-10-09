@@ -11,36 +11,53 @@ OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t coun
   // ensure we have timing data for LED type
   auto timing = ledTiming.find(type);
   assert(timing != ledTiming.end());
-
   _ledParameters = timing->second;
 
-    // configure RMT for GPIO
+  // configure RMT for GPIO
   rmt_config_t config = RMT_DEFAULT_CONFIG_TX((gpio_num_t) pin, _channel);
   config.clk_div = 2;
 
   // install RMT driver for channel
   rmt_config(&config);
-  rmt_driver_install(_channel, 0, ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL1);
+  rmt_driver_install(_channel, 0, 0);
 
-  uint32_t clock = 0;
-  auto err = rmt_get_counter_clock(_channel, &clock);
+  uint32_t _clock;
+  auto err = rmt_get_counter_clock(_channel, &_clock);
   if (err != ESP_OK) {
-    printf("Unable to get RMT counter clock frequency\n");
+    ESP_LOGE(ADDRESSABLE_LED_TAG, "Unable to get RMT counter clock frequency");
     return;
   }
 
+  // get timing parameters from map
+  if (ledTiming.find(type) == ledTiming.end()) {
+    ESP_LOGE(ADDRESSABLE_LED_TAG, "Unable to get timing data for type %d", type);
+    return;
+  }
+
+  LEDTimingParameters timingParameters = ledTiming[type];
+
   // set T0H, T0L, T1H, T1L durations into RMT pulses
-  float ratio = (float)clock / 1e9;
-  uint32_t t0HTicks = (uint32_t) (_ledParameters.T0H * ratio);
-  uint32_t t0LTicks = (uint32_t) (_ledParameters.T0L * ratio);
-  uint32_t t1HTicks = (uint32_t) (_ledParameters.T1H * ratio);
-  uint32_t t1LTicks = (uint32_t) (_ledParameters.T1L * ratio);
+  float ratio = (float)_clock / 1e9;
+  uint32_t t0HTicks = (uint32_t) (timingParameters.T0H * ratio);
+  uint32_t t0LTicks = (uint32_t) (timingParameters.T0L * ratio);
+  uint32_t t1HTicks = (uint32_t) (timingParameters.T1H * ratio);
+  uint32_t t1LTicks = (uint32_t) (timingParameters.T1L * ratio);
   _timing.bit0 = {{{ t0HTicks, 1, t0LTicks, 0 }}};
   _timing.bit1 = {{{ t1HTicks, 1, t1LTicks, 0 }}};
-  _timing.reset = _ledParameters.TRS;
+  _timing.reset = timingParameters.TRS;
 
   // install translator
-  err = rmt_translator_init(_channel, translateToRMT, &_timing);
+  switch (type) {
+    case WS2813:
+      err = rmt_translator_init(_channel, translateToRMT, &_timing);
+      break;
+    case SK6812:
+    case SK6812_RGBW:
+      err = rmt_translator_init(_channel, translateToRMT, &_timing);
+    case NeoPixel:
+    default:
+      err = rmt_translator_init(_channel, translateToRMT, &_timing);
+  }
   if (err != ESP_OK) {
     printf("Unable to register RMT translator for channel %d\n", channel);
     return;
@@ -95,21 +112,22 @@ void IRAM_ATTR OneWireLED::translateToRMT(const void *src, rmt_item32_t *dest,
   const uint8_t* psrc = static_cast<const uint8_t*>(src);
   rmt_item32_t* pdest = dest;
 
-  Timing *led = (Timing*)context;
+  Timing *timing = (Timing*) context; 
+
   for (;;) {
     uint8_t data = *psrc;
     for (uint8_t bit = 0; bit < 8; bit++)
     {
-        pdest->val = (data & 0x80) ? led->bit1.val : led->bit0.val;
-        pdest++;
-        data <<= 1;
+      pdest->val = (data & 0x80) ? timing->bit1.val : timing->bit0.val;
+      pdest++;
+      data <<= 1;
     }
     num += 8;
     size++;
 
-    if (size >= src_size || num >= wanted_num) {
-        break;
-    }
+    if (size >= src_size || num >= wanted_num)
+      break;
+
     psrc++;
   }
   *translated_size = size;
@@ -142,6 +160,7 @@ void OneWireLED::pixelToRaw(Rgb *pixel, uint16_t index) {
       _buffer[start + 1] = pixel->r - white;
       _buffer[start + 2] = pixel->b - white;
       _buffer[start + 3] = white;
+      break;
     case PixelOrder::GRB:
     default:
       _buffer[start] = pixel->g;

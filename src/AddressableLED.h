@@ -14,14 +14,13 @@ enum WireType { OneWire, TwoWire };
 enum PixelOrder { RGB, GRB, BGR, RGBW, GRBW, WBGR };
 
 enum LEDType : uint8_t {
-  NeoPixel,
-  WS2812,
-  WS2812B,
+  NeoPixel = 0,
+  WS2812 = 0,
   WS2813,
   SK6812,
   SK6812_RGBW,
   DotStar,
-  APA102,
+  APA102 = 4,
 };
 
 struct LEDTimingParameters {
@@ -32,8 +31,11 @@ struct LEDTimingParameters {
   uint32_t TRS;
 };
 
+static const char* ADDRESSABLE_LED_TAG = "AddressableLED";
+
 class AddressableLED {
   protected:
+    portMUX_TYPE _transmitMutex;
     uint16_t _count;
     WireType _wireType;
     PixelOrder _pixelOrder;
@@ -43,8 +45,6 @@ class AddressableLED {
     uint8_t* _buffer;
 
     virtual void startTransmission() = 0;
-    static std::string TAG;
-
     static std::map<LEDType, LEDTimingParameters> ledTiming;
 
     static uint8_t pixelsForPixelOrder(PixelOrder order) {

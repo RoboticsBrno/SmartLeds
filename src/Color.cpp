@@ -55,27 +55,6 @@ Rgb& Rgb::operator+=(Rgb in) {
   return *this;
 }
 
-uint8_t IRAM_ATTR Rgb::getGrb(int idx) {
-  switch ( idx ) {
-    case 0: return g;
-    case 1: return r;
-    case 2: return b;
-  }
-  __builtin_unreachable();
-}
-
-uint8_t IRAM_ATTR Rgb::getRgbw(int idx) {
-  auto white = std::min(r, std::min(g, b));
-
-  switch ( idx ) {
-    case 0: return r - white;
-    case 1: return g - white;
-    case 2: return b - white;
-    case 3: return white;
-  }
-
-  __builtin_unreachable();
-}
 
 Hsv::Hsv(Rgb r) {
   int min = std::min(r.r, std::min(r.g, r.b));
