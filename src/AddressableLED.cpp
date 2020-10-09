@@ -34,7 +34,7 @@ AddressableLED::~AddressableLED() {
 }
 
 void AddressableLED::show() {
-  // copy into raw uint8_t buffer
+  // convert into raw uint8_t buffer
   for (uint16_t i = 0; i < _count; i++)
     pixelToRaw(&_pixels[i], i);
 

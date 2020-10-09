@@ -51,7 +51,4 @@ class OneWireLED : public AddressableLED {
     ~OneWireLED();
 
     bool wait(uint32_t timeout = portMAX_DELAY);
-
-    Rgb getPixel(uint16_t index);
-    void setPixel(uint16_t index, Rgb pixel);
 };

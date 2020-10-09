@@ -23,7 +23,7 @@ TwoWireLED::TwoWireLED(spi_host_device_t host, uint16_t count, uint8_t clock, ui
   auto ret = spi_bus_initialize(host, &buscfg, 1);
   assert(ret == ESP_OK);
 
-  ret=spi_bus_add_device(host, &devcfg, &_spi);
+  ret = spi_bus_add_device(host, &devcfg, &_spi);
   assert(ret == ESP_OK);
 
   std::fill_n(_finalFrame, FINAL_FRAME_SIZE, 0xFFFFFFFF);
@@ -42,7 +42,7 @@ TwoWireLED::~TwoWireLED() {
 
 bool TwoWireLED::wait(uint32_t timeout) {
   for (int i = 0; i != _transCount; i++) {
-    spi_transaction_t *t;
+    spi_transaction_t t;
     auto err = spi_device_get_trans_result(_spi, &t, timeout);
     if (err != ESP_OK) return false;
   }
