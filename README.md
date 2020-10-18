@@ -1,6 +1,13 @@
-# SmartLeds
+# AddressableLED
 
-Simple & intuitive way to drive various smart LEDs on ESP32.
+A fork of [SmartLeds](https://github.com/RoboticsBrno/SmartLeds) that gives lets you drive RGB and RGBW addressable LEDs via RMT and SPI.
+
+## Differences from SmartLeds
+
+* Supports both RGB and RGBW type of leds
+* Gives you the option to specify pixel order (useful for chipsets that operate differently from the common GRB order)
+* Utilizes the built-in ESP32 RMT driver to translate pixel data into RMT signals
+* Renames `SmartLed` to `OneWireLED` and `Apa102` to `TwoWireLED`. Both inherit from an abstract class called `AddressableLED`
 
 ## Supported LEDs:
 
@@ -25,6 +32,3 @@ performance.
 - can drive up to 2 strings
 - occupies the SPI peripherals
 - clock at 10 MHz
-
-## Available
-[PlatformIO - library 1740 - SmartLeds](https://platformio.org/lib/show/1740/SmartLeds)
