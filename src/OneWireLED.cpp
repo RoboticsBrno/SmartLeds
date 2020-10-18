@@ -47,17 +47,7 @@ OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t coun
   _timing.reset = timingParameters.TRS;
 
   // install translator
-  switch (type) {
-    case WS2813:
-      err = rmt_translator_init(_channel, translateToRMT, &_timing);
-      break;
-    case SK6812:
-    case SK6812_RGBW:
-      err = rmt_translator_init(_channel, translateToRMT, &_timing);
-    case NeoPixel:
-    default:
-      err = rmt_translator_init(_channel, translateToRMT, &_timing);
-  }
+  err = rmt_translator_init_with_context(_channel, translateToRMT, &_timing);
   if (err != ESP_OK) {
     printf("Unable to register RMT translator for channel %d\n", channel);
     return;
@@ -69,10 +59,8 @@ OneWireLED::OneWireLED(LEDType type, uint8_t pin, uint8_t channel, uint16_t coun
 OneWireLED::~OneWireLED() {
   // uninstall rmt driver
   rmt_driver_uninstall(_channel);
-
   ledForChannel(_channel) = nullptr;
-  if (!anyAlive())
-    esp_intr_free(_interruptHandle);
+  releaseMemory();
 }
 
 OneWireLED*& IRAM_ATTR OneWireLED::ledForChannel(rmt_channel_t channel) {

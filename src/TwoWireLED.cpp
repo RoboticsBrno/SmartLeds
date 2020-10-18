@@ -37,7 +37,7 @@ TwoWireLED::~TwoWireLED() {
   auto err = spi_bus_remove_device(_spi);
   assert(err == ESP_OK);
 
-  // todo
+  releaseMemory();
 }
 
 bool TwoWireLED::wait(uint32_t timeout) {
