@@ -42,7 +42,7 @@ TwoWireLED::~TwoWireLED() {
 
 bool TwoWireLED::wait(uint32_t timeout) {
   for (int i = 0; i != _transCount; i++) {
-    spi_transaction_t t;
+    spi_transaction_t *t;
     auto err = spi_device_get_trans_result(_spi, &t, timeout);
     if (err != ESP_OK) return false;
   }
