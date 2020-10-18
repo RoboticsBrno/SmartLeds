@@ -30,11 +30,6 @@ AddressableLED::AddressableLED(int count, WireType wireType, PixelOrder pixelOrd
     vPortCPUInitializeMutex(&_transmitMutex);
   }
 
-AddressableLED::~AddressableLED() {
-  delete[] _pixels;
-  free(_buffer);
-}
-
 void AddressableLED::show() {
   // copy into raw uint8_t buffer
   portENTER_CRITICAL(&_transmitMutex);

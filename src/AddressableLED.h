@@ -64,7 +64,7 @@ class AddressableLED {
 
   public:
     AddressableLED(int count, WireType wireType, PixelOrder pixelOrder, uint8_t bytesPerPixel);
-    ~AddressableLED();
+    virtual ~AddressableLED() = default;
 
     Rgb& operator[](int idx) { return _pixels[idx]; }
     const Rgb& operator[](int idx) const { return _pixels[idx]; }
@@ -76,4 +76,6 @@ class AddressableLED {
     virtual bool wait(uint32_t timeout = portMAX_DELAY) = 0;
 
     WireType getWireType() { return _wireType; }
+
+    void releaseMemory() { delete[] _pixels; free(_buffer); }
 };
