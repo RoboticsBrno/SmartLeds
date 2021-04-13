@@ -1,6 +1,7 @@
 #include "Color.h"
 #include <algorithm>
 #include <cmath>
+#include <cassert>
 
 namespace {
 
@@ -8,6 +9,25 @@ namespace {
 int up( int x ) { return x * 255; }
 
 } // namespace
+
+int iRgbSqrt(int num) {
+    // https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Binary_numeral_system_.28base_2.29
+    assert(("sqrt input should be non-negative", num >= 0));
+    assert(("sqrt input should no exceed 16 bits", num <= 0xFFFF));
+    int res = 0;
+    int bit = 1 << 16;
+    while (bit > num)
+        bit >>= 2;
+    while (bit != 0) {
+        if (num >= res + bit) {
+            num -= res + bit;
+            res = (res >> 1) + bit;
+        } else
+            res >>= 1;
+        bit >>= 2;
+    }
+    return res;
+}
 
 Rgb::Rgb( Hsv y ) {
     // https://stackoverflow.com/questions/24152553/hsv-to-rgb-and-back-without-floating-point-math-in-python
@@ -33,6 +53,8 @@ Rgb::Rgb( Hsv y ) {
         case 5: r = y.v; g = p; b = q; break;
         default: __builtin_trap();
     }
+
+    a = y.a;
 }
 
 Rgb& Rgb::operator=( Hsv hsv ) {
@@ -54,6 +76,16 @@ Rgb& Rgb::operator+=( Rgb in ) {
     g = ( green < 255 ) ? green : 255;
     unsigned int blue = b + in.b;
     b = ( blue < 255 ) ? blue : 255;
+    return *this;
+}
+
+Rgb& Rgb::blend( Rgb in ) {
+    unsigned int inAlpha = in.a * ( 255 - a );
+    unsigned int alpha = a + inAlpha;
+    r = iRgbSqrt( ( ( r * r * a ) + ( in.r * in.r * inAlpha ) ) / alpha );
+    g = iRgbSqrt( ( ( g * g * a ) + ( in.g * in.g * inAlpha ) ) / alpha );
+    b = iRgbSqrt( ( ( b * b * a ) + ( in.b * in.b * inAlpha ) ) / alpha );
+    a = alpha;
     return *this;
 }
 
@@ -89,6 +121,8 @@ Hsv::Hsv( Rgb r ) {
     if ( hh < 0 )
         hh += 255;
     h = hh;
+
+    a = r.a;
 }
 
 Hsv& Hsv::operator=( Rgb rgb ) {

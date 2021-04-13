@@ -6,16 +6,17 @@ union Hsv;
 
 union Rgb {
     struct __attribute__ ((packed)) {
-        uint8_t r, g, b, _extra;
+        uint8_t r, g, b, a;
     };
     uint32_t value;
 
-    Rgb( uint8_t r = 0, uint8_t g = 0, uint8_t b = 0 ) : r( r ), g( g ), b( b ), _extra( 0 ) {}
+    Rgb( uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : r( r ), g( g ), b( b ), a( a ) {}
     Rgb( Hsv c );
     Rgb& operator=( Rgb rgb ) { swap( rgb ); return *this; }
     Rgb& operator=( Hsv hsv );
     Rgb operator+( Rgb in ) const;
     Rgb& operator+=( Rgb in );
+    Rgb& blend( Rgb in );
     void swap( Rgb& o ) {  value = o.value; }
     void linearize() {
         r = ( static_cast< int >( r ) * static_cast< int >( r ) ) >> 8;
@@ -43,11 +44,11 @@ private:
 
 union Hsv {
     struct __attribute__ ((packed)) {
-        uint8_t h, s, v, _extra;
+        uint8_t h, s, v, a;
     };
     uint32_t value;
 
-    Hsv( uint8_t h, uint8_t s = 0, uint8_t v = 0 ) : h( h ), s( s ), v( v ), _extra( 0 ) {}
+    Hsv( uint8_t h, uint8_t s = 0, uint8_t v = 0, uint8_t a = 255 ) : h( h ), s( s ), v( v ), a( a ) {}
     Hsv( Rgb r );
     Hsv& operator=( Hsv h ) { swap( h ); return *this; }
     Hsv& operator=( Rgb rgb );
