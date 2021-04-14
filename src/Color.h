@@ -16,6 +16,7 @@ union Rgb {
     Rgb& operator=( Hsv hsv );
     Rgb operator+( Rgb in ) const;
     Rgb& operator+=( Rgb in );
+    bool operator==( Rgb in ) const { return in.value == value; }
     Rgb& blend( Rgb in );
     void swap( Rgb& o ) {  value = o.value; }
     void linearize() {
@@ -52,5 +53,6 @@ union Hsv {
     Hsv( Rgb r );
     Hsv& operator=( Hsv h ) { swap( h ); return *this; }
     Hsv& operator=( Rgb rgb );
+    bool operator==( Hsv in ) const { return in.value == value; }
     void swap( Hsv& o ) { value = o.value; }
 };
