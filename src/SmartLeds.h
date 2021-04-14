@@ -41,6 +41,10 @@
         #include "freertos/semphr.h"
         #include "soc/rmt_struct.h"
         #include <driver/spi_master.h>
+        #include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+        #include "soc/dport_reg.h"
+#endif
     }
 #elif defined ( ESP_PLATFORM )
     extern "C" { // ...someone forgot to put in the includes...
