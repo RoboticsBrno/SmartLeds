@@ -9,6 +9,7 @@ Simple & intuitive way to drive various smart LEDs on ESP32.
 - SK6812  (RMT driver)
 - WS2813  (RMT driver)
 - APA102  (SPI driver)
+- LPD8806  (SPI driver)
 
 All the LEDs are driven by hardware peripherals in order to achieve high
 performance.
