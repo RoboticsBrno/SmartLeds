@@ -368,3 +368,131 @@ private:
     uint32_t _initFrame;
     uint32_t _finalFrame[ FINAL_FRAME_SIZE ];
 };
+
+class LDP8806 {
+public:
+    struct LDP8806_GRB {
+
+        LDP8806_GRB( uint8_t g_7bit = 0, uint8_t r_7bit = 0, uint32_t b_7bit = 0 )
+            : g( g_7bit ), r( r_7bit ), b( b_7bit )
+        {
+        }
+
+        LDP8806_GRB& operator=( const Rgb& o ) {
+            //Convert 8->7bit colour
+            r = ( o.r * 127 / 256 ) | 0x80;
+            g = ( o.g * 127 / 256 ) | 0x80;
+            b = ( o.b * 127 / 256 ) | 0x80;
+            return *this;
+        }                   
+
+        LDP8806_GRB& operator=( const Hsv& o ) {
+            *this = Rgb{ o };
+            return *this;
+        }
+
+        uint8_t g, r, b;
+    };
+
+    static const int LED_FRAME_SIZE_BYTES = sizeof( LDP8806_GRB );
+    static const int LATCH_FRAME_SIZE_BYTES = 3;
+    static const int TRANS_COUNT_MAX = 20;//Arbitrary, supports up to 600 LED
+
+    LDP8806( int count, int clkpin, int datapin, BufferType doubleBuffer = SingleBuffer, uint32_t clock_speed_hz = 2000000 )
+        : _count( count ),
+          _firstBuffer( new LDP8806_GRB[ count ] ),
+          _secondBuffer( doubleBuffer ? new LDP8806_GRB[ count ] : nullptr),
+          // one 'latch'/start-of-data mark frame for every 32 leds 
+          _latchFrames( ( count + 31 ) / 32 )
+    {
+        spi_bus_config_t buscfg;
+        memset( &buscfg, 0, sizeof( buscfg ) );
+        buscfg.mosi_io_num = datapin;
+        buscfg.miso_io_num = -1;
+        buscfg.sclk_io_num = clkpin;
+        buscfg.quadwp_io_num = -1;
+        buscfg.quadhd_io_num = -1;
+        buscfg.max_transfer_sz = 65535;
+
+        spi_device_interface_config_t devcfg;
+        memset( &devcfg, 0, sizeof( devcfg ) );
+        devcfg.clock_speed_hz = clock_speed_hz;
+        devcfg.mode=0;
+        devcfg.spics_io_num = -1;
+        devcfg.queue_size = TRANS_COUNT_MAX;
+        devcfg.pre_cb = nullptr;
+
+        auto ret=spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
+        assert( ret==ESP_OK );
+
+        ret=spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
+        assert( ret==ESP_OK );
+
+        std::fill_n( _latchBuffer, LATCH_FRAME_SIZE_BYTES, 0x0 );
+    }
+
+    ~LDP8806() {
+        // noop
+    }
+
+    LDP8806_GRB& operator[]( int idx ) {
+        return _firstBuffer[ idx ];
+    }
+
+    const LDP8806_GRB& operator[]( int idx ) const {
+        return _firstBuffer[ idx ];
+    }
+
+    void show() {
+        _buffer = _firstBuffer.get();
+        startTransmission();
+        swapBuffers();
+    }
+
+    void wait() {
+        while ( _transCount-- ) {
+            spi_transaction_t *t;
+            spi_device_get_trans_result( _spi, &t, portMAX_DELAY );
+        }
+    }
+private:
+    void swapBuffers() {
+        if ( _secondBuffer )
+            _firstBuffer.swap( _secondBuffer );
+    }
+
+    void startTransmission() {
+        _transCount = 0;
+        for ( int i = 0; i != TRANS_COUNT_MAX; i++ ) {
+            _transactions[ i ].cmd = 0;
+            _transactions[ i ].addr = 0;
+            _transactions[ i ].flags = 0;
+            _transactions[ i ].rxlength = 0;
+            _transactions[ i ].rx_buffer = nullptr;
+        }
+        // LED Data
+        _transactions[ 0 ].length = ( LED_FRAME_SIZE_BYTES * 8 ) * _count;
+        _transactions[ 0 ].tx_buffer = _buffer;
+        spi_device_queue_trans( _spi, _transactions + _transCount, portMAX_DELAY );
+        _transCount++;
+
+        // 'latch'/start-of-data marker frames
+        for ( int i = 0; i < _latchFrames; i++ ) {
+            _transactions[ _transCount ].length = ( LATCH_FRAME_SIZE_BYTES * 8 );
+            _transactions[ _transCount ].tx_buffer = _latchBuffer;
+            spi_device_queue_trans( _spi, _transactions + _transCount, portMAX_DELAY );
+            _transCount++;
+        }
+    }
+
+    spi_device_handle_t _spi;
+    int _count;
+    std::unique_ptr< LDP8806_GRB[] > _firstBuffer, _secondBuffer;
+    LDP8806_GRB *_buffer;
+
+    spi_transaction_t _transactions[ TRANS_COUNT_MAX ];
+    int _transCount;
+
+    int _latchFrames;
+    uint8_t _latchBuffer[ LATCH_FRAME_SIZE_BYTES ];
+};
