@@ -12,8 +12,8 @@ int up( int x ) { return x * 255; }
 
 int iRgbSqrt(int num) {
     // https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Binary_numeral_system_.28base_2.29
-    assert(("sqrt input should be non-negative", num >= 0));
-    assert(("sqrt input should no exceed 16 bits", num <= 0xFFFF));
+    assert(("sqrt input should be non-negative" && num >= 0));
+    assert(("sqrt input should no exceed 16 bits" && num <= 0xFFFF));
     int res = 0;
     int bit = 1 << 16;
     while (bit > num)
