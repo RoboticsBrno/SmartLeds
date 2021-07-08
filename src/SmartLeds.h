@@ -42,7 +42,7 @@
         #include "soc/rmt_struct.h"
         #include <driver/spi_master.h>
         #include "esp_idf_version.h"
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL( 4, 0, 0 )
         #include "soc/dport_reg.h"
 #endif
     }
@@ -110,7 +110,7 @@ public:
         assert( channel >= 0 && channel < 8 );
         assert( ledForChannel( channel ) == nullptr );
 
-        xSemaphoreGive(_finishedFlag);
+        xSemaphoreGive( _finishedFlag );
 
         DPORT_SET_PERI_REG_MASK( DPORT_PERIP_CLK_EN_REG, DPORT_RMT_CLK_EN );
         DPORT_CLEAR_PERI_REG_MASK( DPORT_PERIP_RST_EN_REG, DPORT_RMT_RST );
@@ -161,8 +161,8 @@ public:
         swapBuffers();
     }
 
-    bool wait(TickType_t timeout = portMAX_DELAY) {
-        if(xSemaphoreTake( _finishedFlag, timeout ) == pdTRUE) {
+    bool wait( TickType_t timeout = portMAX_DELAY ) {
+        if( xSemaphoreTake( _finishedFlag, timeout ) == pdTRUE ) {
             xSemaphoreGive( _finishedFlag );
             return true;
         }
@@ -199,7 +199,7 @@ private:
         RMT.conf_ch[ channel ].conf1.idle_out_lv = 0;
     }
 
-    static SmartLed*& IRAM_ATTR ledForChannel(int channel);
+    static SmartLed*& IRAM_ATTR ledForChannel( int channel );
     static void IRAM_ATTR interruptHandler(void*);
     void IRAM_ATTR copyRmtHalfBlock();
 
@@ -210,7 +210,7 @@ private:
 
     void startTransmission() {
         // Invalid use of the library
-        if(xSemaphoreTake( _finishedFlag, 0 ) != pdTRUE)
+        if( xSemaphoreTake( _finishedFlag, 0 ) != pdTRUE )
             abort();
 
         _pixelPosition = _componentPosition = _halfIdx = 0;
@@ -287,16 +287,16 @@ public:
         spi_device_interface_config_t devcfg;
         memset( &devcfg, 0, sizeof( devcfg ) );
         devcfg.clock_speed_hz = 1000000;
-        devcfg.mode=0;
+        devcfg.mode = 0;
         devcfg.spics_io_num = -1;
         devcfg.queue_size = TRANS_COUNT;
         devcfg.pre_cb = nullptr;
 
-        auto ret=spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
-        assert(ret==ESP_OK);
+        auto ret = spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
+        assert( ret == ESP_OK );
 
-        ret=spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
-        assert(ret==ESP_OK);
+        ret = spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
+        assert( ret == ESP_OK );
 
         std::fill_n( _finalFrame, FINAL_FRAME_SIZE, 0xFFFFFFFF );
     }
@@ -417,16 +417,16 @@ public:
         spi_device_interface_config_t devcfg;
         memset( &devcfg, 0, sizeof( devcfg ) );
         devcfg.clock_speed_hz = clock_speed_hz;
-        devcfg.mode=0;
+        devcfg.mode = 0;
         devcfg.spics_io_num = -1;
         devcfg.queue_size = TRANS_COUNT_MAX;
         devcfg.pre_cb = nullptr;
 
-        auto ret=spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
-        assert( ret==ESP_OK );
+        auto ret = spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
+        assert( ret == ESP_OK );
 
-        ret=spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
-        assert( ret==ESP_OK );
+        ret = spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
+        assert( ret == ESP_OK );
 
         std::fill_n( _latchBuffer, LATCH_FRAME_SIZE_BYTES, 0x0 );
     }
