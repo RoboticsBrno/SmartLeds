@@ -1,23 +1,23 @@
 #include "SmartLeds.h"
 
-SmartLed*& IRAM_ATTR SmartLed::ledForChannel(int channel) {
+SmartLed*& IRAM_ATTR SmartLed::ledForChannel( int channel ) {
     static SmartLed* table[8] = { nullptr };
-    assert(channel < 8);
-    return table[channel];
+    assert( channel < 8 );
+    return table[ channel ];
 }
 
 void IRAM_ATTR SmartLed::interruptHandler(void*) {
     for (int channel = 0; channel != 8; channel++) {
-        auto self = ledForChannel(channel);
+        auto self = ledForChannel( channel );
 
-        if (RMT.int_st.val & (1 << (24 + channel))) { // tx_thr_event
-            if (self)
+        if ( RMT.int_st.val & (1 << (24 + channel ) ) ) { // tx_thr_event
+            if ( self )
                 self->copyRmtHalfBlock();
-            RMT.int_clr.val |= 1 << (24 + channel);
-        } else if (RMT.int_st.val & (1 << (3 * channel))) { // tx_end
-            if (self)
-                xSemaphoreGiveFromISR(self->_finishedFlag, nullptr);
-            RMT.int_clr.val |= 1 << (3 * channel);
+            RMT.int_clr.val |= 1 << ( 24 + channel );
+        } else if ( RMT.int_st.val & ( 1 << (3 * channel ) ) ) { // tx_end
+            if ( self )
+                xSemaphoreGiveFromISR( self->_finishedFlag, nullptr );
+            RMT.int_clr.val |= 1 << ( 3 * channel );
         }
     }
 }
@@ -30,7 +30,7 @@ void IRAM_ATTR SmartLed::copyRmtHalfBlock() {
 
     if ( !len ) {
         for ( int i = 0; i < detail::MAX_PULSES; i++) {
-            RMTMEM.chan[_channel].data32[i + offset].val = 0;
+            RMTMEM.chan[ _channel].data32[i + offset ].val = 0;
         }
     }
 
