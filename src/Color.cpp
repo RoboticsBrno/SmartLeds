@@ -10,18 +10,18 @@ int up( int x ) { return x * 255; }
 
 } // namespace
 
-int iRgbSqrt(int num) {
+int iRgbSqrt( int num ) {
     // https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Binary_numeral_system_.28base_2.29
-    assert("sqrt input should be non-negative" && num >= 0);
-    assert("sqrt input should no exceed 16 bits" && num <= 0xFFFF);
+    assert( "sqrt input should be non-negative" && num >= 0 );
+    assert( "sqrt input should no exceed 16 bits" && num <= 0xFFFF );
     int res = 0;
     int bit = 1 << 16;
-    while (bit > num)
+    while ( bit > num )
         bit >>= 2;
-    while (bit != 0) {
-        if (num >= res + bit) {
+    while ( bit != 0 ) {
+        if ( num >= res + bit ) {
             num -= res + bit;
-            res = (res >> 1) + bit;
+            res = ( res >> 1 ) + bit;
         } else
             res >>= 1;
         bit >>= 2;
@@ -32,19 +32,19 @@ int iRgbSqrt(int num) {
 Rgb::Rgb( Hsv y ) {
     // https://stackoverflow.com/questions/24152553/hsv-to-rgb-and-back-without-floating-point-math-in-python
     // greyscale
-    if(y.s == 0) {
+    if( y.s == 0 ) {
         r = g = b = y.v;
         return;
     }
 
     const int region = y.h / 43;
-    const int remainder = (y.h - (region * 43)) * 6;
+    const int remainder = ( y.h - ( region * 43 ) ) * 6;
 
-    const int p = (y.v * (255 - y.s)) >> 8;
-    const int q = (y.v * (255 - ((y.s * remainder) >> 8))) >> 8;
-    const int t = (y.v * (255 - ((y.s * (255 -remainder)) >> 8))) >> 8;
+    const int p = ( y.v * ( 255 - y.s ) ) >> 8;
+    const int q = ( y.v * ( 255 - ( ( y.s * remainder ) >> 8 ) ) ) >> 8;
+    const int t = ( y.v * ( 255 - ( ( y.s * (255 -remainder ) ) >> 8 ) ) ) >> 8;
 
-    switch(region) {
+    switch( region ) {
         case 0: r = y.v; g = t; b = p; break;
         case 1: r = q; g = y.v; b = p; break;
         case 2: r = p; g = y.v; b = t; break;

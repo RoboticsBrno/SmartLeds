@@ -10,7 +10,7 @@ union Rgb {
     };
     uint32_t value;
 
-    Rgb( uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255) : r( r ), g( g ), b( b ), a( a ) {}
+    Rgb( uint8_t r = 0, uint8_t g = 0, uint8_t b = 0, uint8_t a = 255 ) : r( r ), g( g ), b( b ), a( a ) {}
     Rgb( Hsv c );
     Rgb& operator=( Rgb rgb ) { swap( rgb ); return *this; }
     Rgb& operator=( Hsv hsv );

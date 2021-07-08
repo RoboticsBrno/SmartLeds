@@ -200,7 +200,7 @@ private:
     }
 
     static SmartLed*& IRAM_ATTR ledForChannel( int channel );
-    static void IRAM_ATTR interruptHandler(void*);
+    static void IRAM_ATTR interruptHandler( void* );
     void IRAM_ATTR copyRmtHalfBlock();
 
     void swapBuffers() {
@@ -247,7 +247,7 @@ private:
 class Apa102 {
 public:
     struct ApaRgb {
-        ApaRgb( uint8_t r = 0, uint8_t g = 0, uint32_t b = 0, uint32_t v = 0xFF)
+        ApaRgb( uint8_t r = 0, uint8_t g = 0, uint32_t b = 0, uint32_t v = 0xFF )
             : v( 0xE0 | v ), b( b ), g( g ), r( r )
         {}
 
@@ -258,7 +258,7 @@ public:
             return *this;
         }
 
-        ApaRgb& operator=(const Hsv& o ) {
+        ApaRgb& operator=( const Hsv& o ) {
             *this = Rgb{ o };
             return *this;
         }
@@ -401,7 +401,7 @@ public:
     LDP8806( int count, int clkpin, int datapin, BufferType doubleBuffer = SingleBuffer, uint32_t clock_speed_hz = 2000000 )
         : _count( count ),
           _firstBuffer( new LDP8806_GRB[ count ] ),
-          _secondBuffer( doubleBuffer ? new LDP8806_GRB[ count ] : nullptr),
+          _secondBuffer( doubleBuffer ? new LDP8806_GRB[ count ] : nullptr ),
           // one 'latch'/start-of-data mark frame for every 32 leds 
           _latchFrames( ( count + 31 ) / 32 )
     {
