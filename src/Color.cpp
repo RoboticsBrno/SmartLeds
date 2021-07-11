@@ -70,13 +70,7 @@ Rgb Rgb::operator+( Rgb in ) const {
 }
 
 Rgb& Rgb::operator+=( Rgb in ) {
-    unsigned int red = r + in.r;
-    r = ( red < 255 ) ? red : 255;
-    unsigned int green = g + in.g;
-    g = ( green < 255 ) ? green : 255;
-    unsigned int blue = b + in.b;
-    b = ( blue < 255 ) ? blue : 255;
-    return *this;
+    return blend(in);
 }
 
 Rgb& Rgb::blend( Rgb in ) {
