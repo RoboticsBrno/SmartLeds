@@ -20,9 +20,9 @@ union Rgb {
     Rgb& blend( Rgb in );
     void swap( Rgb& o ) {  value = o.value; }
     void linearize() {
-        r = ( static_cast< int >( r ) * static_cast< int >( r ) ) >> 8;
-        g = ( static_cast< int >( g ) * static_cast< int >( g ) ) >> 8;
-        b = ( static_cast< int >( b ) * static_cast< int >( b ) ) >> 8;
+        r = channelGamma(r);
+        g = channelGamma(g);
+        b = channelGamma(b);
     }
 
     uint8_t IRAM_ATTR getGrb( int idx );
@@ -40,6 +40,17 @@ union Rgb {
 private:
     uint8_t stretch( int value, uint8_t max ) {
         return ( value * max ) >> 8;
+    }
+
+    uint8_t channelGamma( int channel ) {
+        /* The optimal gamma correction is x^2.8. However, this is expensive to
+         * compute. Therefore, we use x^3 for gamma correction. Also, we add a
+         * bias as the WS2812 LEDs do not turn on for values less than 4. */
+        if (channel == 0)
+            return channel;
+        channel = channel * channel * channel * 251;
+        channel >>= 24;
+        return static_cast< uin8_t >( 4 + channel );
     }
 };
 
