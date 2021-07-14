@@ -50,7 +50,7 @@ private:
             return channel;
         channel = channel * channel * channel * 251;
         channel >>= 24;
-        return static_cast< uin8_t >( 4 + channel );
+        return static_cast< uint8_t >( 4 + channel );
     }
 };
 
