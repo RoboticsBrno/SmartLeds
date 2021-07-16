@@ -1,5 +1,8 @@
 #include "SmartLeds.h"
 
+IsrCore SmartLed::_interruptCore = CoreCurrent;
+intr_handle_t SmartLed::_interruptHandle = NULL;
+
 SmartLed*& IRAM_ATTR SmartLed::ledForChannel( int channel ) {
     static SmartLed* table[8] = { nullptr };
     assert( channel < 8 );
