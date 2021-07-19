@@ -36,6 +36,7 @@
     extern "C" { // ...someone forgot to put in the includes...
         #include "esp32-hal.h"
         #include "esp_intr_alloc.h"
+        #include "esp_ipc.h"
         #include "driver/gpio.h"
         #include "driver/periph_ctrl.h"
         #include "freertos/semphr.h"
@@ -49,6 +50,7 @@
 #elif defined ( ESP_PLATFORM )
     extern "C" { // ...someone forgot to put in the includes...
         #include <esp_intr_alloc.h>
+        #include <esp_ipc.h>
         #include <driver/gpio.h>
         #include <freertos/FreeRTOS.h>
         #include <freertos/semphr.h>
@@ -97,9 +99,17 @@ static const LedType LED_WS2813  = { 350, 800, 350, 350, 300000 };
 
 enum BufferType { SingleBuffer = 0, DoubleBuffer };
 
+enum IsrCore { CoreFirst = 0, CoreSecond = 1, CoreCurrent = 2};
+
 class SmartLed {
 public:
-    SmartLed( const LedType& type, int count, int pin, int channel = 0, BufferType doubleBuffer = SingleBuffer )
+    // The RMT interrupt must not run on the same core as WiFi interrupts, otherwise SmartLeds
+    // can't fill the RMT buffer fast enough, resulting in rendering artifacts.
+    // Usually, that means you have to set isrCore == CoreSecond.
+    //
+    // If you use anything other than CoreCurrent, the FreeRTOS scheduler MUST be already running,
+    // so you can't use it if you define SmartLed as global variable.
+    SmartLed( const LedType& type, int count, int pin, int channel = 0, BufferType doubleBuffer = SingleBuffer, IsrCore isrCore = CoreCurrent)
         : _timing( type ),
           _channel( channel ),
           _count( count ),
@@ -134,16 +144,27 @@ public:
         _bitToRmt[ 1 ].duration0 = _timing.T1H / ( detail::RMT_DURATION_NS * detail::DIVIDER );
         _bitToRmt[ 1 ].duration1 = _timing.T1L / ( detail::RMT_DURATION_NS * detail::DIVIDER );
 
-        if ( !anyAlive() )
-            esp_intr_alloc( ETS_RMT_INTR_SOURCE, 0, interruptHandler, nullptr, &_interruptHandle );
+        if ( !anyAlive() ) {
+            _interruptCore = isrCore;
+            if(isrCore != CoreCurrent) {
+                ESP_ERROR_CHECK(esp_ipc_call_blocking(isrCore, registerInterrupt, NULL));
+            } else {
+                registerInterrupt(NULL);
+            }
+        }
 
         ledForChannel( channel ) = this;
     }
 
     ~SmartLed() {
         ledForChannel( _channel ) = nullptr;
-        if ( !anyAlive() )
-            esp_intr_free( _interruptHandle );
+        if ( !anyAlive() ) {
+            if(_interruptCore != CoreCurrent) {
+                ESP_ERROR_CHECK(esp_ipc_call_blocking(_interruptCore, unregisterInterrupt, NULL));
+            } else {
+                unregisterInterrupt(NULL);
+            }
+        }
         vSemaphoreDelete( _finishedFlag );
     }
 
@@ -182,6 +203,9 @@ public:
     const Rgb *cend() const { return _firstBuffer.get() + _count; }
 
 private:
+    static intr_handle_t _interruptHandle;
+    static IsrCore _interruptCore;
+
     static void initChannel( int channel ) {
         RMT.apb_conf.fifo_mask = 1;  //enable memory access, instead of FIFO mode.
         RMT.apb_conf.mem_tx_wrap_en = 1; //wrap around when hitting end of buffer
@@ -199,8 +223,17 @@ private:
         RMT.conf_ch[ channel ].conf1.idle_out_lv = 0;
     }
 
+    static void registerInterrupt(void *) {
+        ESP_ERROR_CHECK(esp_intr_alloc( ETS_RMT_INTR_SOURCE, 0, interruptHandler, nullptr, &_interruptHandle));
+    }
+
+    static void unregisterInterrupt(void*) {
+        esp_intr_free( _interruptHandle );
+    }
+
     static SmartLed*& IRAM_ATTR ledForChannel( int channel );
     static void IRAM_ATTR interruptHandler( void* );
+
     void IRAM_ATTR copyRmtHalfBlock();
 
     void swapBuffers() {
@@ -235,7 +268,6 @@ private:
     std::unique_ptr< Rgb[] > _firstBuffer;
     std::unique_ptr< Rgb[] > _secondBuffer;
     Rgb *_buffer;
-    intr_handle_t _interruptHandle;
 
     xSemaphoreHandle _finishedFlag;
 
@@ -384,7 +416,7 @@ public:
             g = ( o.g * 127 / 256 ) | 0x80;
             b = ( o.b * 127 / 256 ) | 0x80;
             return *this;
-        }                   
+        }
 
         LDP8806_GRB& operator=( const Hsv& o ) {
             *this = Rgb{ o };
@@ -402,7 +434,7 @@ public:
         : _count( count ),
           _firstBuffer( new LDP8806_GRB[ count ] ),
           _secondBuffer( doubleBuffer ? new LDP8806_GRB[ count ] : nullptr ),
-          // one 'latch'/start-of-data mark frame for every 32 leds 
+          // one 'latch'/start-of-data mark frame for every 32 leds
           _latchFrames( ( count + 31 ) / 32 )
     {
         spi_bus_config_t buscfg;
