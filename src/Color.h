@@ -16,6 +16,8 @@ union Rgb {
     Rgb& operator=( Hsv hsv );
     Rgb operator+( Rgb in ) const;
     Rgb& operator+=( Rgb in );
+    Rgb operator-(Rgb in) const;
+    Rgb &operator-=(Rgb in);
     bool operator==( Rgb in ) const { return in.value == value; }
     Rgb& blend( Rgb in );
     void swap( Rgb& o ) {  value = o.value; }
