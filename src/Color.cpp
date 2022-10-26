@@ -79,6 +79,19 @@ Rgb& Rgb::operator+=( Rgb in ) {
     return *this;
 }
 
+Rgb Rgb::operator-( Rgb in ) const {
+    auto copy = *this;
+    copy -= in;
+    return copy;
+}
+
+Rgb& Rgb::operator-=( Rgb in ) {
+    r = ( in.r > r ) ? 0 : r - in.r;
+    g = ( in.g > g ) ? 0 : g - in.g;
+    b = ( in.b > b ) ? 0 : b - in.b;
+    return *this;
+}
+
 Rgb& Rgb::blend( Rgb in ) {
     unsigned int inAlpha = in.a * ( 255 - a );
     unsigned int alpha = a + inAlpha;
