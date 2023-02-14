@@ -102,7 +102,7 @@ Rgb& Rgb::blend( Rgb in ) {
     return *this;
 }
 
-uint8_t IRAM_ATTR Rgb::getGrb( int idx ) {
+uint8_t Rgb::getGrb( int idx ) const {
     switch ( idx ) {
         case 0: return g;
         case 1: return r;

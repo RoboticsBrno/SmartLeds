@@ -32,35 +32,13 @@
 #include <cassert>
 #include <cstring>
 
-#if defined ( ARDUINO )
-    extern "C" { // ...someone forgot to put in the includes...
-        #include "esp32-hal.h"
-        #include "esp_intr_alloc.h"
-        #include "esp_ipc.h"
-        #include "driver/gpio.h"
-        #include "driver/periph_ctrl.h"
-        #include "freertos/semphr.h"
-        #include "soc/rmt_struct.h"
-        #include <driver/spi_master.h>
-        #include "esp_idf_version.h"
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL( 4, 0, 0 )
-        #include "soc/dport_reg.h"
-#endif
-    }
-#elif defined ( ESP_PLATFORM )
-    extern "C" { // ...someone forgot to put in the includes...
-        #include <esp_intr_alloc.h>
-        #include <esp_ipc.h>
-        #include <driver/gpio.h>
-        #include <freertos/FreeRTOS.h>
-        #include <freertos/semphr.h>
-        #include <soc/dport_reg.h>
-        #include <soc/gpio_sig_map.h>
-        #include <soc/rmt_struct.h>
-        #include <driver/spi_master.h>
-    }
-    #include <stdio.h>
-#endif
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+#include <esp_intr_alloc.h>
+#include <esp_ipc.h>
+#include <driver/gpio.h>
+#include <driver/spi_master.h>
+#include <driver/rmt.h>
 
 #include "Color.h"
 
@@ -74,18 +52,7 @@ struct TimingParams {
     uint32_t TRS;
 };
 
-union RmtPulsePair {
-    struct {
-        int duration0:15;
-        int level0:1;
-        int duration1:15;
-        int level1:1;
-    };
-    uint32_t value;
-};
-
 static const int DIVIDER = 4; // 8 still seems to work, but timings become marginal
-static const int MAX_PULSES = 32; // A channel has a 64 "pulse" buffer - we use half per pass
 static const double RMT_DURATION_NS = 12.5; // minimum time of a single RMT duration based on clock ns
 
 } // namespace detail
@@ -97,6 +64,7 @@ static const LedType LED_WS2812B = { 400, 850, 850, 400, 50100 };
 static const LedType LED_SK6812  = { 300, 600, 900, 600, 80000 };
 static const LedType LED_WS2813  = { 350, 800, 350, 350, 300000 };
 
+// Does nothing, kept for backwards compatibility.
 enum BufferType { SingleBuffer = 0, DoubleBuffer };
 
 enum IsrCore { CoreFirst = 0, CoreSecond = 1, CoreCurrent = 2};
@@ -111,28 +79,25 @@ public:
     // so you can't use it if you define SmartLed as global variable.
     SmartLed( const LedType& type, int count, int pin, int channel = 0, BufferType doubleBuffer = SingleBuffer, IsrCore isrCore = CoreCurrent)
         : _timing( type ),
-          _channel( channel ),
+          _channel((rmt_channel_t) channel ),
           _count( count ),
-          _firstBuffer( new Rgb[ count ] ),
-          _secondBuffer( doubleBuffer ? new Rgb[ count ] : nullptr ),
+          _framebuffer( new Rgb[ count ] ),
           _finishedFlag( xSemaphoreCreateBinary() )
     {
-        assert( channel >= 0 && channel < 8 );
+        assert( channel >= 0 && channel < RMT_CHANNEL_MAX );
         assert( ledForChannel( channel ) == nullptr );
 
         xSemaphoreGive( _finishedFlag );
 
-        DPORT_SET_PERI_REG_MASK( DPORT_PERIP_CLK_EN_REG, DPORT_RMT_CLK_EN );
-        DPORT_CLEAR_PERI_REG_MASK( DPORT_PERIP_RST_EN_REG, DPORT_RMT_RST );
+        _rmtBuffer.reset(new rmt_item32_t [ count * 3 * 8 ]);
 
-        PIN_FUNC_SELECT( GPIO_PIN_MUX_REG[ pin ], 2 );
-        gpio_set_direction( static_cast< gpio_num_t >( pin ), GPIO_MODE_OUTPUT );
-        gpio_matrix_out( static_cast< gpio_num_t >( pin ), RMT_SIG_OUT0_IDX + _channel, 0, 0 );
-        initChannel( _channel );
+        rmt_config_t config = RMT_DEFAULT_CONFIG_TX((gpio_num_t)pin, _channel);
+        config.rmt_mode = RMT_MODE_TX;
+        config.clk_div = detail::DIVIDER;
+        config.mem_block_num = 1;
+        config.tx_config.idle_output_en = true;
 
-        RMT.tx_lim_ch[ _channel ].limit = detail::MAX_PULSES;
-        RMT.int_ena.val |= 1 << ( 24 + _channel );
-        RMT.int_ena.val |= 1 << ( 3 * _channel );
+        ESP_ERROR_CHECK(rmt_config(&config));
 
         _bitToRmt[ 0 ].level0 = 1;
         _bitToRmt[ 0 ].level1 = 0;
@@ -144,13 +109,16 @@ public:
         _bitToRmt[ 1 ].duration0 = _timing.T1H / ( detail::RMT_DURATION_NS * detail::DIVIDER );
         _bitToRmt[ 1 ].duration1 = _timing.T1L / ( detail::RMT_DURATION_NS * detail::DIVIDER );
 
-        if ( !anyAlive() ) {
+        const auto anyAliveCached = anyAlive();
+        if (!anyAliveCached && isrCore != CoreCurrent) {
             _interruptCore = isrCore;
-            if(isrCore != CoreCurrent) {
-                ESP_ERROR_CHECK(esp_ipc_call_blocking(isrCore, registerInterrupt, NULL));
-            } else {
-                registerInterrupt(NULL);
-            }
+            ESP_ERROR_CHECK(esp_ipc_call_blocking(isrCore, registerInterrupt, (void*)((intptr_t)_channel)));
+        } else {
+            registerInterrupt((void*)((intptr_t)_channel));
+        }
+
+        if(!anyAliveCached) {
+            rmt_register_tx_end_callback(txEndCallback, NULL);
         }
 
         ledForChannel( channel ) = this;
@@ -158,28 +126,24 @@ public:
 
     ~SmartLed() {
         ledForChannel( _channel ) = nullptr;
-        if ( !anyAlive() ) {
-            if(_interruptCore != CoreCurrent) {
-                ESP_ERROR_CHECK(esp_ipc_call_blocking(_interruptCore, unregisterInterrupt, NULL));
-            } else {
-                unregisterInterrupt(NULL);
-            }
+        if ( !anyAlive() && _interruptCore != CoreCurrent ) {
+            ESP_ERROR_CHECK(esp_ipc_call_blocking(_interruptCore, unregisterInterrupt, (void*)((intptr_t)_channel)));
+        } else {
+            unregisterInterrupt((void*)((intptr_t)_channel));
         }
         vSemaphoreDelete( _finishedFlag );
     }
 
     Rgb& operator[]( int idx ) {
-        return _firstBuffer[ idx ];
+        return _framebuffer[ idx ];
     }
 
     const Rgb& operator[]( int idx ) const {
-        return _firstBuffer[ idx ];
+        return _framebuffer[ idx ];
     }
 
     void show() {
-        _buffer = _firstBuffer.get();
         startTransmission();
-        swapBuffers();
     }
 
     bool wait( TickType_t timeout = portMAX_DELAY ) {
@@ -194,66 +158,26 @@ public:
         return _count;
     }
 
-    Rgb *begin() { return _firstBuffer.get(); }
-    const Rgb *begin() const { return _firstBuffer.get(); }
-    const Rgb *cbegin() const { return _firstBuffer.get(); }
+    Rgb *begin() { return _framebuffer.get(); }
+    const Rgb *begin() const { return _framebuffer.get(); }
+    const Rgb *cbegin() const { return _framebuffer.get(); }
 
-    Rgb *end() { return _firstBuffer.get() + _count; }
-    const Rgb *end() const { return _firstBuffer.get() + _count; }
-    const Rgb *cend() const { return _firstBuffer.get() + _count; }
+    Rgb *end() { return _framebuffer.get() + _count; }
+    const Rgb *end() const { return _framebuffer.get() + _count; }
+    const Rgb *cend() const { return _framebuffer.get() + _count; }
 
 private:
-    static intr_handle_t _interruptHandle;
     static IsrCore _interruptCore;
 
-    static void initChannel( int channel ) {
-        RMT.apb_conf.fifo_mask = 1;  //enable memory access, instead of FIFO mode.
-        RMT.apb_conf.mem_tx_wrap_en = 1; //wrap around when hitting end of buffer
-        RMT.conf_ch[ channel ].conf0.div_cnt = detail::DIVIDER;
-        RMT.conf_ch[ channel ].conf0.mem_size = 1;
-        RMT.conf_ch[ channel ].conf0.carrier_en = 0;
-        RMT.conf_ch[ channel ].conf0.carrier_out_lv = 1;
-        RMT.conf_ch[ channel ].conf0.mem_pd = 0;
-
-        RMT.conf_ch[ channel ].conf1.rx_en = 0;
-        RMT.conf_ch[ channel ].conf1.mem_owner = 0;
-        RMT.conf_ch[ channel ].conf1.tx_conti_mode = 0;    //loop back mode.
-        RMT.conf_ch[ channel ].conf1.ref_always_on = 1;    // use apb clock: 80M
-        RMT.conf_ch[ channel ].conf1.idle_out_en = 1;
-        RMT.conf_ch[ channel ].conf1.idle_out_lv = 0;
+    static void registerInterrupt(void *channelVoid) {
+        ESP_ERROR_CHECK(rmt_driver_install((rmt_channel_t)((intptr_t)channelVoid), 0, ESP_INTR_FLAG_IRAM));
     }
 
-    static void registerInterrupt(void *) {
-        ESP_ERROR_CHECK(esp_intr_alloc( ETS_RMT_INTR_SOURCE, 0, interruptHandler, nullptr, &_interruptHandle));
-    }
-
-    static void unregisterInterrupt(void*) {
-        esp_intr_free( _interruptHandle );
+    static void unregisterInterrupt(void *channelVoid) {
+        ESP_ERROR_CHECK(rmt_driver_uninstall((rmt_channel_t)((intptr_t)channelVoid)));
     }
 
     static SmartLed*& IRAM_ATTR ledForChannel( int channel );
-    static void IRAM_ATTR interruptHandler( void* );
-
-    void IRAM_ATTR copyRmtHalfBlock();
-
-    void swapBuffers() {
-        if ( _secondBuffer )
-            _firstBuffer.swap( _secondBuffer );
-    }
-
-    void startTransmission() {
-        // Invalid use of the library
-        if( xSemaphoreTake( _finishedFlag, 0 ) != pdTRUE )
-            abort();
-
-        _pixelPosition = _componentPosition = _halfIdx = 0;
-        copyRmtHalfBlock();
-        if ( _pixelPosition < _count )
-            copyRmtHalfBlock();
-
-        RMT.conf_ch[ _channel ].conf1.mem_rd_rst = 1;
-        RMT.conf_ch[ _channel ].conf1.tx_start = 1;
-    }
 
     static bool anyAlive() {
         for ( int i = 0; i != 8; i++ )
@@ -261,20 +185,64 @@ private:
         return false;
     }
 
+    static void IRAM_ATTR txEndCallback(rmt_channel_t channel, void *arg);
+
+    esp_err_t startTransmission() {
+        // Invalid use of the library
+        if( xSemaphoreTake( _finishedFlag, 0 ) != pdTRUE )
+            abort();
+
+        // each pixel
+        size_t rmt_idx = 0;
+        for (size_t i = 0; i < _count; ++i) {
+            const auto& pixel = _framebuffer[i];
+
+            // each color channel
+            for(int c = 0; c < 3; ++c) {
+                uint8_t val = pixel.getGrb(c);
+
+                // each bit, from highest to lowest
+                for ( int j = 0; j != 8; j++, val <<= 1 ) {
+                    _rmtBuffer[rmt_idx++].val = _bitToRmt[ val >> 7 ].val;
+                }
+            }
+
+            // delay after each pixel
+            if(rmt_idx > 0) {
+                _rmtBuffer[rmt_idx-1].duration1 =
+                    _timing.TRS / ( detail::RMT_DURATION_NS * detail::DIVIDER );
+            }
+        }
+
+        auto err = rmt_write_items(_channel, _rmtBuffer.get(), bitCount(), false);
+        if(err != ESP_OK) {
+            return err;
+        }
+
+        return ESP_OK;
+    }
+
+    size_t bitCount() const {
+        return size_t(_count) * 3 * 8;
+    }
+
     const LedType& _timing;
-    int _channel;
-    detail::RmtPulsePair _bitToRmt[ 2 ];
+    rmt_channel_t _channel;
+    rmt_item32_t _bitToRmt[ 2 ];
     int _count;
-    std::unique_ptr< Rgb[] > _firstBuffer;
-    std::unique_ptr< Rgb[] > _secondBuffer;
-    Rgb *_buffer;
+    std::unique_ptr< Rgb[] > _framebuffer;
+    std::unique_ptr<rmt_item32_t[]> _rmtBuffer;
 
     xSemaphoreHandle _finishedFlag;
-
-    int _pixelPosition;
-    int _componentPosition;
-    int _halfIdx;
 };
+
+#ifdef CONFIG_IDF_TARGET_ESP32
+#define _SMARTLEDS_SPI_HOST HSPI_HOST
+#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+#define _SMARTLEDS_SPI_HOST SPI2_HOST
+#else
+#error "SmartLeds SPI host not defined for this chip/esp-idf version."
+#endif
 
 class Apa102 {
 public:
@@ -324,10 +292,10 @@ public:
         devcfg.queue_size = TRANS_COUNT;
         devcfg.pre_cb = nullptr;
 
-        auto ret = spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
+        auto ret = spi_bus_initialize( _SMARTLEDS_SPI_HOST, &buscfg, 1 );
         assert( ret == ESP_OK );
 
-        ret = spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
+        ret = spi_bus_add_device( _SMARTLEDS_SPI_HOST, &devcfg, &_spi );
         assert( ret == ESP_OK );
 
         std::fill_n( _finalFrame, FINAL_FRAME_SIZE, 0xFFFFFFFF );
@@ -454,10 +422,10 @@ public:
         devcfg.queue_size = TRANS_COUNT_MAX;
         devcfg.pre_cb = nullptr;
 
-        auto ret = spi_bus_initialize( HSPI_HOST, &buscfg, 1 );
+        auto ret = spi_bus_initialize( _SMARTLEDS_SPI_HOST, &buscfg, 1 );
         assert( ret == ESP_OK );
 
-        ret = spi_bus_add_device( HSPI_HOST, &devcfg, &_spi );
+        ret = spi_bus_add_device( _SMARTLEDS_SPI_HOST, &devcfg, &_spi );
         assert( ret == ESP_OK );
 
         std::fill_n( _latchBuffer, LATCH_FRAME_SIZE_BYTES, 0x0 );

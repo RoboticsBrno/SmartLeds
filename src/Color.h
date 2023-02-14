@@ -27,7 +27,7 @@ union Rgb {
         b = channelGamma(b);
     }
 
-    uint8_t IRAM_ATTR getGrb( int idx );
+    uint8_t getGrb( int idx ) const;
 
     void stretchChannels( uint8_t maxR, uint8_t maxG, uint8_t maxB ) {
         r = stretch( r, maxR );
