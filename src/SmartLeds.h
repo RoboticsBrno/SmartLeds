@@ -38,6 +38,7 @@
 #include <esp_ipc.h>
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
+
 #include <driver/rmt.h>
 
 #include "Color.h"
@@ -64,7 +65,7 @@ static const LedType LED_WS2812B = { 400, 850, 850, 400, 50100 };
 static const LedType LED_SK6812  = { 300, 600, 900, 600, 80000 };
 static const LedType LED_WS2813  = { 350, 800, 350, 350, 300000 };
 
-// Does nothing, kept for backwards compatibility.
+// Single buffer == can't touch the Rgbs between show() and wait()
 enum BufferType { SingleBuffer = 0, DoubleBuffer };
 
 enum IsrCore { CoreFirst = 0, CoreSecond = 1, CoreCurrent = 2};
@@ -77,27 +78,18 @@ public:
     //
     // If you use anything other than CoreCurrent, the FreeRTOS scheduler MUST be already running,
     // so you can't use it if you define SmartLed as global variable.
-    SmartLed( const LedType& type, int count, int pin, int channel = 0, BufferType doubleBuffer = SingleBuffer, IsrCore isrCore = CoreCurrent)
-        : _timing( type ),
-          _channel((rmt_channel_t) channel ),
-          _count( count ),
-          _framebuffer( new Rgb[ count ] ),
-          _finishedFlag( xSemaphoreCreateBinary() )
+    SmartLed(const LedType &type, int count, int pin, int channel = 0, BufferType doubleBuffer = DoubleBuffer, IsrCore isrCore = CoreCurrent)
+        : _timing(type),
+          _channel((rmt_channel_t)channel),
+          _count(count),
+          _firstBuffer(new Rgb[count]),
+          _secondBuffer( doubleBuffer ? new Rgb[ count ] : nullptr ),
+          _finishedFlag(xSemaphoreCreateBinary())
     {
         assert( channel >= 0 && channel < RMT_CHANNEL_MAX );
         assert( ledForChannel( channel ) == nullptr );
 
         xSemaphoreGive( _finishedFlag );
-
-        _rmtBuffer.reset(new rmt_item32_t [ count * 3 * 8 ]);
-
-        rmt_config_t config = RMT_DEFAULT_CONFIG_TX((gpio_num_t)pin, _channel);
-        config.rmt_mode = RMT_MODE_TX;
-        config.clk_div = detail::DIVIDER;
-        config.mem_block_num = 1;
-        config.tx_config.idle_output_en = true;
-
-        ESP_ERROR_CHECK(rmt_config(&config));
 
         _bitToRmt[ 0 ].level0 = 1;
         _bitToRmt[ 0 ].level1 = 0;
@@ -108,6 +100,14 @@ public:
         _bitToRmt[ 1 ].level1 = 0;
         _bitToRmt[ 1 ].duration0 = _timing.T1H / ( detail::RMT_DURATION_NS * detail::DIVIDER );
         _bitToRmt[ 1 ].duration1 = _timing.T1L / ( detail::RMT_DURATION_NS * detail::DIVIDER );
+
+        rmt_config_t config = RMT_DEFAULT_CONFIG_TX((gpio_num_t)pin, _channel);
+        config.rmt_mode = RMT_MODE_TX;
+        config.clk_div = detail::DIVIDER;
+        config.mem_block_num = 1;
+        config.tx_config.idle_output_en = true;
+
+        ESP_ERROR_CHECK(rmt_config(&config));
 
         const auto anyAliveCached = anyAlive();
         if (!anyAliveCached && isrCore != CoreCurrent) {
@@ -120,6 +120,9 @@ public:
         if(!anyAliveCached) {
             rmt_register_tx_end_callback(txEndCallback, NULL);
         }
+
+        ESP_ERROR_CHECK(rmt_translator_init(_channel, translateForRmt));
+        ESP_ERROR_CHECK(rmt_translator_set_context(_channel, this));
 
         ledForChannel( channel ) = this;
     }
@@ -135,15 +138,16 @@ public:
     }
 
     Rgb& operator[]( int idx ) {
-        return _framebuffer[ idx ];
+        return _firstBuffer[ idx ];
     }
 
     const Rgb& operator[]( int idx ) const {
-        return _framebuffer[ idx ];
+        return _firstBuffer[ idx ];
     }
 
     void show() {
         startTransmission();
+        swapBuffers();
     }
 
     bool wait( TickType_t timeout = portMAX_DELAY ) {
@@ -158,13 +162,13 @@ public:
         return _count;
     }
 
-    Rgb *begin() { return _framebuffer.get(); }
-    const Rgb *begin() const { return _framebuffer.get(); }
-    const Rgb *cbegin() const { return _framebuffer.get(); }
+    Rgb *begin() { return _firstBuffer.get(); }
+    const Rgb *begin() const { return _firstBuffer.get(); }
+    const Rgb *cbegin() const { return _firstBuffer.get(); }
 
-    Rgb *end() { return _framebuffer.get() + _count; }
-    const Rgb *end() const { return _framebuffer.get() + _count; }
-    const Rgb *cend() const { return _framebuffer.get() + _count; }
+    Rgb *end() { return _firstBuffer.get() + _count; }
+    const Rgb *end() const { return _firstBuffer.get() + _count; }
+    const Rgb *cend() const { return _firstBuffer.get() + _count; }
 
 private:
     static IsrCore _interruptCore;
@@ -187,34 +191,22 @@ private:
 
     static void IRAM_ATTR txEndCallback(rmt_channel_t channel, void *arg);
 
+    static void IRAM_ATTR translateForRmt(const void *src, rmt_item32_t *dest, size_t src_size,
+        size_t wanted_rmt_items_num, size_t *out_consumed_src_bytes, size_t *out_used_rmt_items);
+
+    void swapBuffers() {
+        if (_secondBuffer)
+            _firstBuffer.swap(_secondBuffer);
+    }
+
     esp_err_t startTransmission() {
-        // Invalid use of the library
+        // Invalid use of the library, you must wait() fir previous frame to get processed first
         if( xSemaphoreTake( _finishedFlag, 0 ) != pdTRUE )
             abort();
 
-        // each pixel
-        size_t rmt_idx = 0;
-        for (size_t i = 0; i < _count; ++i) {
-            const auto& pixel = _framebuffer[i];
+        _translatorSourceOffset = 0;
 
-            // each color channel
-            for(int c = 0; c < 3; ++c) {
-                uint8_t val = pixel.getGrb(c);
-
-                // each bit, from highest to lowest
-                for ( int j = 0; j != 8; j++, val <<= 1 ) {
-                    _rmtBuffer[rmt_idx++].val = _bitToRmt[ val >> 7 ].val;
-                }
-            }
-
-            // delay after each pixel
-            if(rmt_idx > 0) {
-                _rmtBuffer[rmt_idx-1].duration1 =
-                    _timing.TRS / ( detail::RMT_DURATION_NS * detail::DIVIDER );
-            }
-        }
-
-        auto err = rmt_write_items(_channel, _rmtBuffer.get(), bitCount(), false);
+        auto err = rmt_write_sample(_channel, (const uint8_t *)_firstBuffer.get(), _count * 4, false);
         if(err != ESP_OK) {
             return err;
         }
@@ -222,18 +214,16 @@ private:
         return ESP_OK;
     }
 
-    size_t bitCount() const {
-        return size_t(_count) * 3 * 8;
-    }
-
     const LedType& _timing;
     rmt_channel_t _channel;
     rmt_item32_t _bitToRmt[ 2 ];
     int _count;
-    std::unique_ptr< Rgb[] > _framebuffer;
-    std::unique_ptr<rmt_item32_t[]> _rmtBuffer;
+    std::unique_ptr<Rgb[]> _firstBuffer;
+    std::unique_ptr<Rgb[]> _secondBuffer;
 
-    xSemaphoreHandle _finishedFlag;
+    size_t _translatorSourceOffset;
+
+    SemaphoreHandle_t _finishedFlag;
 };
 
 #ifdef CONFIG_IDF_TARGET_ESP32
