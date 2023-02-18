@@ -145,9 +145,10 @@ public:
         return _firstBuffer[ idx ];
     }
 
-    void show() {
-        startTransmission();
+    esp_err_t show() {
+        esp_err_t err = startTransmission();
         swapBuffers();
+        return err;
     }
 
     bool wait( TickType_t timeout = portMAX_DELAY ) {

@@ -21,8 +21,6 @@ void IRAM_ATTR SmartLed::translateForRmt(const void *src, rmt_item32_t *dest, si
     const auto& _bitToRmt = self->_bitToRmt;
     const auto src_offset = self->_translatorSourceOffset;
 
-    const auto pixel_delay = self->_timing.TRS / ( detail::RMT_DURATION_NS * detail::DIVIDER );
-
     auto *src_components = (const uint8_t *)src;
     size_t consumed_src_bytes = 0;
     size_t used_rmt_items = 0;
@@ -40,11 +38,15 @@ void IRAM_ATTR SmartLed::translateForRmt(const void *src, rmt_item32_t *dest, si
         ++src_components;
         ++consumed_src_bytes;
 
-        // skip alpha byte, delay after each pixel
+        // skip alpha byte
         if(((src_offset + consumed_src_bytes) % 4) == 3) {
-            (dest-1)->duration1 = pixel_delay;
             ++src_components;
             ++consumed_src_bytes;
+
+            // TRST delay after last pixel in strip
+            if(consumed_src_bytes == src_size) {
+                (dest-1)->duration1 = self->_timing.TRS / ( detail::RMT_DURATION_NS * detail::DIVIDER );
+            }
         }
     }
 
