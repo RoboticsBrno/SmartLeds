@@ -10,7 +10,7 @@
 
 #include "Color.h"
 
-#ifndef CONFIG_RMT_ISR_IRAM_SAFE
+#if !defined(CONFIG_RMT_ISR_IRAM_SAFE) && !defined(SMARTLEDS_DISABLE_IRAM_WARNING)
 #warning "Please enable CONFIG_RMT_ISR_IRAM_SAFE IDF option." \
     "without it, the IDF driver is not able to supply data fast enough."
 #endif

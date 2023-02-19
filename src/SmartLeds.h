@@ -48,7 +48,12 @@ using LedType = detail::TimingParams;
 // Times are in nanoseconds,
 // The RMT driver runs at 20MHz, so minimal representable time is 50 nanoseconds
 static const LedType LED_WS2812 = { 350, 700, 800, 600, 50000 };
-static const LedType LED_WS2812B = { 400, 800, 850, 450, 100000 };
+// longer reset time because https://blog.adafruit.com/2017/05/03/psa-the-ws2812b-rgb-led-has-been-revised-will-require-code-tweak/
+static const LedType LED_WS2812B = { 400, 800, 850, 450, 300000 }; // universal
+static const LedType LED_WS2812B_NEWVARIANT = { 200, 750, 750, 200, 300000 };
+static const LedType LED_WS2812B_OLDVARIANT = { 400, 800, 850, 450, 50000 };
+// This is timing from datasheet, but does not seem to actually work - try LED_WS2812B
+static const LedType LED_WS2812C = { 250, 550, 550, 250, 280000 };
 static const LedType LED_SK6812 = { 300, 600, 900, 600, 80000 };
 static const LedType LED_WS2813 = { 350, 800, 350, 350, 300000 };
 

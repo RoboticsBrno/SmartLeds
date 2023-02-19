@@ -3,8 +3,6 @@
 #if SMARTLEDS_NEW_RMT_DRIVER
 #include <cstddef>
 
-#include <esp32/rom/ets_sys.h>
-
 #include "SmartLeds.h"
 
 namespace detail {

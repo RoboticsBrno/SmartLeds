@@ -32,7 +32,6 @@ esp_err_t RmtDriver::init() {
     config.rmt_mode = RMT_MODE_TX;
     config.clk_div = DIVIDER;
     config.mem_block_num = 1;
-    //config.tx_config.idle_output_en = true;
 
     return rmt_config(&config);
 }
