@@ -126,6 +126,7 @@ public:
     }
 
     int size() const { return _count; }
+    int channel() const { return _channel; }
 
     Rgb* begin() { return _firstBuffer.get(); }
     const Rgb* begin() const { return _firstBuffer.get(); }
