@@ -29,7 +29,7 @@ struct RmtEncoderWrapper {
     RmtDriver* driver;
     rmt_symbol_word_t reset_code;
 
-    uint8_t buffer[64 / 8]; // RMT peripherial has buffer for 64 bits
+    uint8_t buffer[SOC_RMT_MEM_WORDS_PER_CHANNEL / 8];
     rmt_encode_state_t last_state;
     size_t frame_idx;
     uint8_t component_idx;

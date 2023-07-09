@@ -183,12 +183,10 @@ private:
     std::unique_ptr<Rgb[]> _secondBuffer;
 };
 
-#ifdef CONFIG_IDF_TARGET_ESP32
-#define _SMARTLEDS_SPI_HOST HSPI_HOST
-#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
 #define _SMARTLEDS_SPI_HOST SPI2_HOST
 #else
-#error "SmartLeds SPI host not defined for this chip/esp-idf version."
+#define _SMARTLEDS_SPI_HOST HSPI_HOST
 #endif
 
 class Apa102 {

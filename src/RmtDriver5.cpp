@@ -8,7 +8,7 @@
 namespace detail {
 
 static constexpr const uint32_t RMT_RESOLUTION_HZ = 20 * 1000 * 1000; // 20 MHz
-static constexpr const uint32_t RMT_NS_PER_TICK = 1000000000LU / RMT_RESOLUTION_HZ;
+static constexpr const uint32_t RMT_NS_PER_TICK = 1000000000LLU / RMT_RESOLUTION_HZ;
 
 static RmtEncoderWrapper* IRAM_ATTR encSelf(rmt_encoder_t* encoder) {
     return (RmtEncoderWrapper*)(((intptr_t)encoder) - offsetof(RmtEncoderWrapper, base));
@@ -124,7 +124,7 @@ esp_err_t RmtDriver::registerIsr(bool isFirstRegisteredChannel) {
         .gpio_num = _pin,
         .clk_src = RMT_CLK_SRC_APB,
         .resolution_hz = RMT_RESOLUTION_HZ,
-        .mem_block_symbols = 64,
+        .mem_block_symbols = SOC_RMT_MEM_WORDS_PER_CHANNEL,
         .trans_queue_depth = 1,
         .flags = {},
     };
@@ -147,6 +147,11 @@ esp_err_t RmtDriver::registerIsr(bool isFirstRegisteredChannel) {
 
 esp_err_t RmtDriver::unregisterIsr() {
     auto err = rmt_del_encoder(&_encoder.base);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = rmt_disable(_channel);
     if (err != ESP_OK) {
         return err;
     }

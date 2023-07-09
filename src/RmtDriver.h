@@ -1,10 +1,14 @@
 #pragma once
 
-#include <esp_idf_version.h>
+#include <esp_system.h>
 #include <stdint.h>
 
-#if (defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+#if defined(ESP_IDF_VERSION)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #define SMARTLEDS_NEW_RMT_DRIVER 1
+#else
+#define SMARTLEDS_NEW_RMT_DRIVER 0
+#endif
 #else
 #define SMARTLEDS_NEW_RMT_DRIVER 0
 #endif
