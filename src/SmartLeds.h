@@ -72,6 +72,8 @@ public:
     //
     // If you use anything other than CoreCurrent, the FreeRTOS scheduler MUST be already running,
     // so you can't use it if you define SmartLed as global variable.
+    //
+    // Does nothing on chips that only have one core.
     SmartLed(const LedType& type, int count, int pin, int channel = 0, BufferType doubleBuffer = DoubleBuffer,
         IsrCore isrCore = CoreCurrent)
         : _finishedFlag(xSemaphoreCreateBinary())
@@ -87,10 +89,13 @@ public:
 
         _driver.init();
 
+#if !defined(SOC_CPU_CORES_NUM) || SOC_CPU_CORES_NUM > 1
         if (!anyAlive() && isrCore != CoreCurrent) {
             _interruptCore = isrCore;
             ESP_ERROR_CHECK(esp_ipc_call_blocking(isrCore, registerInterrupt, (void*)this));
-        } else {
+        } else
+#endif
+        {
             registerInterrupt((void*)this);
         }
 
@@ -99,9 +104,12 @@ public:
 
     ~SmartLed() {
         ledForChannel(_channel) = nullptr;
+#if !defined(SOC_CPU_CORES_NUM) || SOC_CPU_CORES_NUM > 1
         if (!anyAlive() && _interruptCore != CoreCurrent) {
             ESP_ERROR_CHECK(esp_ipc_call_blocking(_interruptCore, unregisterInterrupt, (void*)this));
-        } else {
+        } else
+#endif
+        {
             unregisterInterrupt((void*)this);
         }
         vSemaphoreDelete(_finishedFlag);
@@ -184,7 +192,7 @@ private:
     std::unique_ptr<Rgb[]> _secondBuffer;
 };
 
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
+#if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3)
 #define _SMARTLEDS_SPI_HOST SPI2_HOST
 #else
 #define _SMARTLEDS_SPI_HOST HSPI_HOST

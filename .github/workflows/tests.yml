@@ -6,6 +6,7 @@ jobs:
   build-test:
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         example:
           - examples/basic
@@ -14,6 +15,8 @@ jobs:
           - esp32-idf5-idf.ini
           - esp32s3-idf4-arduino.ini
           - esp32s3-idf5-idf.ini
+          - esp32c3-idf4-arduino.ini
+          - esp32c3-idf5-idf.ini
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
