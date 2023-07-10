@@ -87,15 +87,15 @@ esp_err_t RmtDriver::init() {
 
     rmt_bytes_encoder_config_t bytes_cfg = {
         .bit0 = {
-            .duration0 = uint32_t(_timing.T0H  / RMT_NS_PER_TICK),
+            .duration0 = uint16_t(_timing.T0H  / RMT_NS_PER_TICK),
             .level0 = 1,
-            .duration1 = uint32_t(_timing.T0L  / RMT_NS_PER_TICK),
+            .duration1 = uint16_t(_timing.T0L  / RMT_NS_PER_TICK),
             .level1 = 0,
         },
         .bit1 = {
-            .duration0 = uint32_t(_timing.T1H / RMT_NS_PER_TICK),
+            .duration0 = uint16_t(_timing.T1H / RMT_NS_PER_TICK),
             .level0 = 1,
-            .duration1 = uint32_t(_timing.T1L  / RMT_NS_PER_TICK),
+            .duration1 = uint16_t(_timing.T1L  / RMT_NS_PER_TICK),
             .level1 = 0,
         },
         .flags = {
