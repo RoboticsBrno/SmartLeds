@@ -1,21 +1,21 @@
 {
-    "name": "SmartLeds",
+    "name": "AddressableLED",
     "keywords": "LED, esp32, NeoPixel, WS2812, WS2812B, APA102",
     "description": "Simple & intuitive way to drive various smart LEDs on ESP32.",
     "repository":
     {
         "type": "git",
-        "url": "https://github.com/RoboticsBrno/SmartLeds.git"
+        "url": "https://github.com/intentfulmotion/AddressableLED.git"
     },
     "authors": [
         {
-            "name": "Jan Mrázek",
-            "email": "email@honzamrazek.cz",
-            "url": "http://www.robotikabrno.cz",
+            "name": "Nishanth Samala",
+            "email": "hey@outlandnish.com",
+            "url": "https://github.com/outlnandnish",
             "maintainer": true
         }
     ],
-    "version": "1.2.1",
+    "version": "0.1.0",
     "frameworks": ["arduino","espidf"],
     "platforms": "espressif32"
 }
