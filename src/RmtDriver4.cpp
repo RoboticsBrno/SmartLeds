@@ -37,7 +37,13 @@ esp_err_t RmtDriver::init() {
 }
 
 esp_err_t RmtDriver::registerIsr(bool isFirstRegisteredChannel) {
-    auto err = rmt_driver_install(_channel, 0, ESP_INTR_FLAG_IRAM);
+    auto err = rmt_driver_install(_channel, 0,
+#if defined(CONFIG_RMT_ISR_IRAM_SAFE)
+        ESP_INTR_FLAG_IRAM
+#else
+        0
+#endif
+    );
     if (err != ESP_OK) {
         return err;
     }
