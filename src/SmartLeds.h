@@ -227,7 +227,7 @@ public:
     static const int FINAL_FRAME_SIZE = 4;
     static const int TRANS_COUNT = 2 + 8;
 
-    Apa102(int count, int clkpin, int datapin, BufferType doubleBuffer = SingleBuffer)
+    Apa102(int count, int clkpin, int datapin, BufferType doubleBuffer = SingleBuffer, int clock_speed_hz = 1000000)
         : _count(count)
         , _firstBuffer(new ApaRgb[count])
         , _secondBuffer(doubleBuffer ? new ApaRgb[count] : nullptr)
@@ -243,7 +243,7 @@ public:
 
         spi_device_interface_config_t devcfg;
         memset(&devcfg, 0, sizeof(devcfg));
-        devcfg.clock_speed_hz = 1000000;
+        devcfg.clock_speed_hz = clock_speed_hz;
         devcfg.mode = 0;
         devcfg.spics_io_num = -1;
         devcfg.queue_size = TRANS_COUNT;
