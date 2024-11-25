@@ -194,8 +194,10 @@ private:
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3)
 #define _SMARTLEDS_SPI_HOST SPI2_HOST
+#define _SMARTLEDS_SPI_DMA_CHAN SPI_DMA_CH_AUTO
 #else
 #define _SMARTLEDS_SPI_HOST HSPI_HOST
+#define _SMARTLEDS_SPI_DMA_CHAN 1
 #endif
 
 class Apa102 {
@@ -247,7 +249,7 @@ public:
         devcfg.queue_size = TRANS_COUNT;
         devcfg.pre_cb = nullptr;
 
-        auto ret = spi_bus_initialize(_SMARTLEDS_SPI_HOST, &buscfg, 1);
+        auto ret = spi_bus_initialize(_SMARTLEDS_SPI_HOST, &buscfg, _SMARTLEDS_SPI_DMA_CHAN);
         assert(ret == ESP_OK);
 
         ret = spi_bus_add_device(_SMARTLEDS_SPI_HOST, &devcfg, &_spi);
@@ -375,7 +377,7 @@ public:
         devcfg.queue_size = TRANS_COUNT_MAX;
         devcfg.pre_cb = nullptr;
 
-        auto ret = spi_bus_initialize(_SMARTLEDS_SPI_HOST, &buscfg, 1);
+        auto ret = spi_bus_initialize(_SMARTLEDS_SPI_HOST, &buscfg, _SMARTLEDS_SPI_DMA_CHAN);
         assert(ret == ESP_OK);
 
         ret = spi_bus_add_device(_SMARTLEDS_SPI_HOST, &devcfg, &_spi);
