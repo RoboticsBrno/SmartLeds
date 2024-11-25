@@ -231,6 +231,7 @@ public:
         : _count(count)
         , _firstBuffer(new ApaRgb[count])
         , _secondBuffer(doubleBuffer ? new ApaRgb[count] : nullptr)
+        , _transCount(0)
         , _initFrame(0) {
         spi_bus_config_t buscfg;
         memset(&buscfg, 0, sizeof(buscfg));
