@@ -200,6 +200,7 @@ private:
 #define _SMARTLEDS_SPI_DMA_CHAN 1
 #endif
 
+// Can also handle SK9822
 class Apa102 {
 public:
     struct ApaRgb {
@@ -256,7 +257,7 @@ public:
         ret = spi_bus_add_device(_SMARTLEDS_SPI_HOST, &devcfg, &_spi);
         assert(ret == ESP_OK);
 
-        std::fill_n(_finalFrame, FINAL_FRAME_SIZE, 0xFFFFFFFF);
+        std::fill_n(_finalFrame, FINAL_FRAME_SIZE, 0);
     }
 
     ~Apa102() {
@@ -304,8 +305,10 @@ private:
         spi_device_queue_trans(_spi, _transactions + 1, portMAX_DELAY);
         _transCount = 2;
         // End frame
-        for (int i = 0; i != 1 + _count / 32 / FINAL_FRAME_SIZE; i++) {
-            _transactions[2 + i].length = 32 * FINAL_FRAME_SIZE;
+        // https://cpldcpu.com/2016/12/13/sk9822-a-clone-of-the-apa102/ - "Unified protocol"
+        const int end_bits = 32 + (_count/2 + 1);
+        for (int i = 0; i < end_bits; i += 32 * FINAL_FRAME_SIZE) {
+            _transactions[2 + i].length = std::min(32 * FINAL_FRAME_SIZE, end_bits - i);
             _transactions[2 + i].tx_buffer = _finalFrame;
             spi_device_queue_trans(_spi, _transactions + 2 + i, portMAX_DELAY);
             _transCount++;
