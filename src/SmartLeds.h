@@ -192,7 +192,7 @@ private:
     std::unique_ptr<Rgb[]> _secondBuffer;
 };
 
-#if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3)
+#if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C6)
 #define _SMARTLEDS_SPI_HOST SPI2_HOST
 #define _SMARTLEDS_SPI_DMA_CHAN SPI_DMA_CH_AUTO
 #else
