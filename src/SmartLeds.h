@@ -82,6 +82,13 @@ struct RgbDeleter {
     }
 };
 
+#if __cpp_exceptions
+    #define SMARTLEDS_ALLOC_FAIL() throw std::bad_alloc();
+#else
+    #define SMARTLEDS_ALLOC_FAIL() abort();
+#endif
+
+
 class SmartLed {
 public:
     friend class detail::RmtDriver;
@@ -106,14 +113,14 @@ public:
 
         auto mem = heap_caps_malloc(sizeof(detail::RmtDriver), MALLOC_CAP_INTERNAL);
         if (!mem) {
-            throw std::bad_alloc();;
+            SMARTLEDS_ALLOC_FAIL();
         }
         _driver.reset(new (reinterpret_cast<detail::RmtDriver*>(mem)) detail::RmtDriver(type, count, pin, channel, _finishedFlag));
 
         constexpr auto allocateRgb = [](size_t count, auto memoryCaps) {
             auto mem = reinterpret_cast<Rgb*>(heap_caps_malloc(sizeof(Rgb) * count, memoryCaps));
             if (!mem) {
-                throw std::bad_alloc();;
+                SMARTLEDS_ALLOC_FAIL();
             }
             return new (mem) Rgb[count];
         };
