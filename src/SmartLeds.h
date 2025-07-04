@@ -62,6 +62,26 @@ enum BufferType { SingleBuffer = 0, DoubleBuffer };
 
 enum IsrCore { CoreFirst = 0, CoreSecond = 1, CoreCurrent = 2 };
 
+struct RmtDriverDeleter {
+    void operator()(detail::RmtDriver* ptr) const {
+        if (ptr) {
+            std::destroy_at(ptr);
+            heap_caps_free(ptr);
+        }
+    }
+};
+
+struct RgbDeleter {
+    int count = 0;
+
+    void operator()(Rgb* ptr) const {
+        if (ptr) {
+            std::destroy(ptr, ptr + count);
+            heap_caps_free(ptr);
+        }
+    }
+};
+
 class SmartLed {
 public:
     friend class detail::RmtDriver;
@@ -77,17 +97,36 @@ public:
     SmartLed(const LedType& type, int count, int pin, int channel = 0, BufferType doubleBuffer = DoubleBuffer,
         IsrCore isrCore = CoreCurrent)
         : _finishedFlag(xSemaphoreCreateBinary())
-        , _driver(type, count, pin, channel, _finishedFlag)
         , _channel(channel)
-        , _count(count)
-        , _firstBuffer(new Rgb[count])
-        , _secondBuffer(doubleBuffer ? new Rgb[count] : nullptr) {
+        , _count(count) {
         assert(channel >= 0 && channel < detail::CHANNEL_COUNT);
         assert(ledForChannel(channel) == nullptr);
 
         xSemaphoreGive(_finishedFlag);
 
-        _driver.init();
+        auto mem = heap_caps_malloc(sizeof(detail::RmtDriver), MALLOC_CAP_INTERNAL);
+        if (!mem) {
+            throw std::bad_alloc();;
+        }
+        _driver.reset(new (reinterpret_cast<detail::RmtDriver*>(mem)) detail::RmtDriver(type, count, pin, channel, _finishedFlag));
+
+        constexpr auto allocateRgb = [](size_t count, auto memoryCaps) {
+            auto mem = reinterpret_cast<Rgb*>(heap_caps_malloc(sizeof(Rgb) * count, memoryCaps));
+            if (!mem) {
+                throw std::bad_alloc();;
+            }
+            return new (mem) Rgb[count];
+        };
+
+        _firstBuffer.reset(allocateRgb(count, MALLOC_CAP_INTERNAL));
+        _firstBuffer.get_deleter().count = count;
+
+        if (doubleBuffer) {
+            _secondBuffer.reset(allocateRgb(count, MALLOC_CAP_INTERNAL));
+            _secondBuffer.get_deleter().count = count;
+        }
+
+        _driver->init();
 
 #if !defined(SOC_CPU_CORES_NUM) || SOC_CPU_CORES_NUM > 1
         if (!anyAlive() && isrCore != CoreCurrent) {
@@ -149,12 +188,12 @@ private:
 
     static void registerInterrupt(void* selfVoid) {
         auto* self = (SmartLed*)selfVoid;
-        ESP_ERROR_CHECK(self->_driver.registerIsr(!anyAlive()));
+        ESP_ERROR_CHECK(self->_driver->registerIsr(!anyAlive()));
     }
 
     static void unregisterInterrupt(void* selfVoid) {
         auto* self = (SmartLed*)selfVoid;
-        ESP_ERROR_CHECK(self->_driver.unregisterIsr());
+        ESP_ERROR_CHECK(self->_driver->unregisterIsr());
     }
 
     static SmartLed*& IRAM_ATTR ledForChannel(int channel);
@@ -176,7 +215,7 @@ private:
         if (xSemaphoreTake(_finishedFlag, 0) != pdTRUE)
             abort();
 
-        auto err = _driver.transmit(_firstBuffer.get());
+        auto err = _driver->transmit(_firstBuffer.get());
         if (err != ESP_OK) {
             return err;
         }
@@ -185,11 +224,11 @@ private:
     }
 
     SemaphoreHandle_t _finishedFlag;
-    detail::RmtDriver _driver;
+    std::unique_ptr<detail::RmtDriver, RmtDriverDeleter> _driver;
     int _channel;
     int _count;
-    std::unique_ptr<Rgb[]> _firstBuffer;
-    std::unique_ptr<Rgb[]> _secondBuffer;
+    std::unique_ptr<Rgb[], RgbDeleter> _firstBuffer;
+    std::unique_ptr<Rgb[], RgbDeleter> _secondBuffer;
 };
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C3)
